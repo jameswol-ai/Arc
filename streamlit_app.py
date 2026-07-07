@@ -1,20 +1,15 @@
 # =========================================================
 # ARC — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
-# v19 – Seismic, Rebar, Comparison, Export Report
+# v19.1 – Seismic, Rebar, Comparison, Export + Full Fixes
 # Zero-Dependency Single-File Streamlit Implementation
 # =========================================================
 
 import streamlit as st
 import json
 import uuid
-import random
 import math
 from pathlib import Path
 from datetime import datetime, timedelta
-
-# =========================================================
-# SYSTEM CONFIG & UI STYLING (unchanged from v17, but v19 label)
-# =========================================================
 
 st.set_page_config(
     page_title="Arc Studio | Oculus Rift",
@@ -26,23 +21,19 @@ st.set_page_config(
 MEMORY_FILE = Path("arc_studio_v19.json")
 
 # ------------------------------------------------------------
-# CUSTOM THEME (same as v17, adjusted version number)
+# CUSTOM THEME
 # ------------------------------------------------------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
     html, body, [data-testid="stAppViewContainer"], .main {
         background: radial-gradient(ellipse at 20% 50%, #0a0f1c 0%, #03050b 70%);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: #e0e7ff;
+        font-family: 'Plus Jakarta Sans', sans-serif; color: #e0e7ff;
     }
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 700;
-        letter-spacing: -0.02em;
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700;
         background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     [data-testid="stSidebar"] {
         background: linear-gradient(145deg, #060b17 0%, #030712 100%);
@@ -50,49 +41,22 @@ st.markdown("""
     }
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.4));
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        border-radius: 18px;
-        padding: 18px 22px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(56,189,248,0.1);
+        border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 18px; padding: 18px 22px;
     }
     .stButton > button {
-        background: linear-gradient(135deg, #1e293b, #0f172a);
-        border: 1px solid #38bdf8;
-        color: #e0e7ff;
-        border-radius: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #38bdf8;
+        color: #e0e7ff; border-radius: 12px; font-weight: 700; text-transform: uppercase;
     }
-    .stButton > button:hover {
-        border-color: #f59e0b;
-        color: #f59e0b;
-        box-shadow: 0 0 25px #f59e0b80;
-        transform: translateY(-2px);
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 30px;
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid #2d3a5a;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #1e3a5f, #0f172a) !important;
-        border-color: #38bdf8 !important;
-        color: #38bdf8 !important;
-    }
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-        margin: 30px 0;
-    }
+    .stButton > button:hover { border-color: #f59e0b; color: #f59e0b; }
+    .stTabs [data-baseweb="tab"] { border-radius: 30px; background: rgba(15, 23, 42, 0.7); border: 1px solid #2d3a5a; }
+    .stTabs [aria-selected="true"] { background: linear-gradient(135deg, #1e3a5f, #0f172a) !important; border-color: #38bdf8 !important; color: #38bdf8 !important; }
+    hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, #38bdf8, transparent); margin: 30px 0; }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
 # DATA CONFIGURATIONS
 # =========================================================
-
 REGIONAL_FX = {
     "Kenya": {"currency": "KES", "rate_to_usd": 129.49, "symbol": "KSh", "cost_multiplier": 1.0, "risk_premium": 0.02},
     "Uganda": {"currency": "UGX", "rate_to_usd": 3665.20, "symbol": "USh", "cost_multiplier": 0.95, "risk_premium": 0.03},
@@ -122,13 +86,12 @@ SEISMIC_ZONES = {
 # =========================================================
 # STATE MANAGEMENT
 # =========================================================
-
 DEFAULT_STATE = {"designs": [], "logs": []}
 
 def load_memory():
     if MEMORY_FILE.exists():
         try:
-            with open(MEMORY_FILE, encoding="utf-8") as f:
+            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return DEFAULT_STATE.copy()
@@ -151,9 +114,47 @@ if "active_design" not in st.session_state:
     st.session_state.active_design = None
 
 # =========================================================
-# INTELLIGENT FLOOR PLAN LAYOUT ENGINE
+# COMPATIBILITY FIX — ensure old designs get missing keys
 # =========================================================
+def ensure_design_compatibility(design):
+    """Add missing keys to old designs so all functions work without error."""
+    # If 'layout' missing, regenerate from existing rooms and structural span
+    if "layout" not in design:
+        span = design["structural"]["span"]
+        ground_footprint = design["ground_footprint"]
+        bay_area = span * span
+        total_bays = max(2, math.ceil(ground_footprint / bay_area))
+        nx = max(2, math.ceil(math.sqrt(total_bays)))
+        ny = max(2, math.ceil(total_bays / nx))
+        from copy import deepcopy
+        layout_grid = generate_intelligent_layout(design["rooms"], nx, ny, span)
+        design["layout"] = {"grid": layout_grid, "nx": nx, "ny": ny}
 
+    # If 'loads' missing, add defaults
+    if "loads" not in design:
+        design["loads"] = {
+            "g_k": 5.5,
+            "q_k": 2.5 if design["domain"] == "Residential" else (4.0 if design["domain"] == "Commercial" else 7.5),
+            "steel_section": None,
+            "seismic_zone": "Moderate (PGA=0.15g)"
+        }
+    else:
+        # Ensure all sub-keys exist
+        loads = design["loads"]
+        if "seismic_zone" not in loads:
+            loads["seismic_zone"] = "Moderate (PGA=0.15g)"
+        if "g_k" not in loads:
+            loads["g_k"] = 5.5
+        if "q_k" not in loads:
+            loads["q_k"] = 2.5 if design["domain"] == "Residential" else (4.0 if design["domain"] == "Commercial" else 7.5)
+        if "steel_section" not in loads:
+            loads["steel_section"] = None
+
+    return design
+
+# =========================================================
+# INTELLIGENT FLOOR PLAN LAYOUT
+# =========================================================
 def generate_intelligent_layout(rooms, nx, ny, span):
     circulation = [r for r in rooms if r["type"] == "Circulation"]
     other = [r for r in rooms if r["type"] != "Circulation"]
@@ -184,7 +185,9 @@ def generate_intelligent_layout(rooms, nx, ny, span):
         for row in range(ny):
             for col in range(nx):
                 if grid[row][col] is None:
-                    grid[row][col] = {"room_index": rooms.index(ordered_rooms[room_idx]), "room_name": ordered_rooms[room_idx]["name"], "color": ordered_rooms[room_idx]["color"]}
+                    grid[row][col] = {"room_index": rooms.index(ordered_rooms[room_idx]),
+                                      "room_name": ordered_rooms[room_idx]["name"],
+                                      "color": ordered_rooms[room_idx]["color"]}
                     room_idx += 1
                     if room_idx >= len(ordered_rooms): break
             if room_idx >= len(ordered_rooms): break
@@ -192,9 +195,8 @@ def generate_intelligent_layout(rooms, nx, ny, span):
     return grid
 
 # =========================================================
-# SPATIAL SYNTHESIS ENGINE
+# BUILDING MODEL GENERATOR
 # =========================================================
-
 def generate_building_model(domain, btype, floors, bathrooms, country, material_frame, plot_size, soil_type,
                             g_k, q_k, steel_section, seismic_zone):
     rooms = []
@@ -206,8 +208,7 @@ def generate_building_model(domain, btype, floors, bathrooms, country, material_
     if domain == "Residential":
         rooms.append({"name": "Grand Living Room", "type": "Living Space", "w": 8, "h": 6, "color": "#0d2040", "doors": 2, "windows": 4})
         rooms.append({"name": "Chef's Kitchen Deck", "type": "Utility", "w": 4, "h": 4, "color": "#053020", "doors": 1, "windows": 2})
-        bedroom_count = max(1, floors)
-        for i in range(bedroom_count):
+        for i in range(max(1, floors)):
             rooms.append({"name": f"Master Suite Room {i+1}", "type": "Private", "w": 5, "h": 4, "color": "#2a0f4d", "doors": 1, "windows": 2})
     elif domain == "Commercial":
         rooms.append({"name": "Co-Working Hub Suite", "type": "Workspace", "w": 12, "h": 8, "color": "#075e8a", "doors": 3, "windows": 6})
@@ -252,10 +253,10 @@ def generate_building_model(domain, btype, floors, bathrooms, country, material_
     }
 
 # =========================================================
-# STRUCTURAL ANALYSIS — v19 with seismic and auto-footing
+# STRUCTURAL ANALYSIS (v19.1 – scope fixes)
 # =========================================================
-
 def run_eurocode_analysis(design):
+    design = ensure_design_compatibility(design)  # ensure loads & seismic exist
     span = design["structural"]["span"]
     domain = design["domain"]
     material_frame = design["material_frame"]
@@ -270,15 +271,19 @@ def run_eurocode_analysis(design):
     w_ed = design_load_kpa * tributary_width
     m_ed = (w_ed * span**2) / 8
 
-    # ---------- BENDING & SHEAR ----------
+    # ------ MATERIAL PROPERTIES (defined once to avoid scope issues) ------
     if material_frame == "Reinforced Concrete (Eurocode 2)":
         b, d_eff = 300, 450
         f_ck, f_yk = 30, 500
+        E = 200000
+        I = (300 * 450**3) / 12
+        # bending
         M_ed_Nmm = m_ed * 1e6
         z = 0.95 * d_eff
         A_s_req = M_ed_Nmm / (0.87 * f_yk * z)
         x = (A_s_req * 0.87 * f_yk) / (0.85 * f_ck * b * 0.8)
-        if x > 0.45 * d_eff: A_s_req *= 1.2
+        if x > 0.45 * d_eff:
+            A_s_req *= 1.2
         bar_dia = 20
         bar_area = math.pi * (bar_dia**2) / 4
         n_bars = max(2, math.ceil(A_s_req / bar_area))
@@ -287,14 +292,22 @@ def run_eurocode_analysis(design):
         z_prov = d_eff - 0.4 * x_prov
         m_rd = (0.87 * f_yk * A_s_prov * z_prov) / 1e6
         bending_label = f"RC Beam {b}×{d_eff}mm, {n_bars}H{bar_dia}"
+
+        # shear
         v_ed = w_ed * span / 2
-        k = 1 + math.sqrt(200 / d_eff) if d_eff > 200 else 2.0
+        k_shear = 1 + math.sqrt(200 / d_eff) if d_eff > 200 else 2.0
         rho_l = min(A_s_prov / (b * d_eff), 0.02)
-        v_rd_c = (0.18 / 1.5) * k * (100 * rho_l * f_ck) ** (1/3) * b * d_eff / 1000
-        v_min = 0.035 * k**1.5 * math.sqrt(f_ck) * b * d_eff / 1000
+        v_rd_c = (0.18 / 1.5) * k_shear * (100 * rho_l * f_ck) ** (1/3) * b * d_eff / 1000
+        v_min = 0.035 * k_shear**1.5 * math.sqrt(f_ck) * b * d_eff / 1000
         v_rd_c = max(v_rd_c, v_min)
-        shear_status = "PASS (No Shear Reinf. Required)" if v_ed <= v_rd_c else "FAIL (Shear Reinforcement Needed)"
+        shear_status = "PASS (No Shear Reinf.)" if v_ed <= v_rd_c else "FAIL (Shear Reinf. Needed)"
         shear_label = f"V_Rd,c = {v_rd_c:.1f} kN"
+
+        # column / seismic
+        col_side = 300
+        N_rd = 0.85 * f_ck * col_side**2 / 1.5 / 1000   # kN
+        M_rd_col = 0.15 * f_ck * col_side**3 / 1e6      # kNm
+
     elif material_frame == "Structural Steel Profile (Eurocode 3)":
         STEEL_SECTIONS = {
             "UB 254x146x31":  {"Wpl_y": 377e3, "fy": 275, "Avz": 2200},
@@ -302,17 +315,27 @@ def run_eurocode_analysis(design):
             "UC 254x254x73": {"Wpl_y": 1090e3, "fy": 275, "Avz": 5700},
             "UC 305x305x97": {"Wpl_y": 1869e3, "fy": 275, "Avz": 8700},
         }
-        sec = STEEL_SECTIONS[loads["steel_section"]]
+        section_name = loads["steel_section"] if loads["steel_section"] else "UC 305x305x97"
+        sec = STEEL_SECTIONS[section_name]
         Wpl, fy, Avz = sec["Wpl_y"], sec["fy"], sec["Avz"]
+        E = 200000
+        I = 150e6
         m_rd = (Wpl * fy) / 1.0 / 1e6
-        bending_label = f"Steel {loads['steel_section']}"
+        bending_label = f"Steel {section_name}"
         v_ed = w_ed * span / 2
         v_pl_rd = (Avz * (fy / math.sqrt(3))) / 1.0 / 1000
-        shear_status = "PASS" if v_ed <= v_pl_rd else "FAIL (Shear Failure)"
+        shear_status = "PASS" if v_ed <= v_pl_rd else "FAIL"
         shear_label = f"V_pl,Rd = {v_pl_rd:.1f} kN"
-    else:   # Timber
+
+        # column / seismic
+        A = 123e2   # mm² for UC305
+        N_rd = A * fy / 1.0 / 1000
+        M_rd_col = (Wpl * fy) / 1.0 / 1e6   # reuse Wpl
+
+    else:   # Timber (Eurocode 5)
         f_mk, k_mod, gamma_m = 24.0, 0.80, 1.3
         b_tim, h_tim = 200, 500
+        E, I = 11000, (200 * 500**3) / 12
         W_el = (b_tim * h_tim**2) / 6
         m_rd = (k_mod * f_mk / gamma_m * W_el) / 1e6
         bending_label = f"Timber {b_tim}×{h_tim}mm"
@@ -322,63 +345,40 @@ def run_eurocode_analysis(design):
         shear_status = "PASS" if v_ed <= V_rd else "FAIL"
         shear_label = f"V_Rd = {V_rd:.1f} kN"
 
-    # ---------- SLS DEFLECTION ----------
+        # column / seismic (timber post)
+        b_col, h_col = 200, 200
+        A = b_col * h_col
+        f_c0k = 21.0
+        N_rd = (k_mod * f_c0k / gamma_m) * A / 1000
+        M_rd_col = 10.0   # placeholder
+
+    # ------ SLS DEFLECTION ------
     psi2 = 0.3 if domain == "Residential" else (0.6 if domain == "Commercial" else 0.8)
     service_load = g_k + psi2 * q_k
     w_service = service_load * tributary_width
-    if "Concrete" in material_frame: E, I = 200000, (300 * 450**3)/12
-    elif "Steel" in material_frame: E, I = 200000, 150e6
-    else: E, I = 11000, (200 * 500**3)/12
     est_deflection = (5 * w_service * (span*1000)**4) / (384 * E * I)
     allowable_deflection = (span*1000)/250
     sls_status = "PASS" if est_deflection <= allowable_deflection else "FAIL"
 
-    # ---------- COLUMN & SEISMIC ----------
+    # ------ COLUMN AXIAL & SEISMIC UTILISATION ------
     tributary_area_col = span * span
     axial_per_floor = design_load_kpa * tributary_area_col
     N_ed = axial_per_floor * floors
-
-    # Seismic base shear (simplified)
-    W_total = axial_per_floor * floors * (design["structural"]["columns"] / (span * span))  # approx weight
-    # Actually total weight = (g_k + 0.3*q_k) * total GFA (approx)
-    total_weight = (g_k + 0.3 * q_k) * design["total_gfa"]   # kN
-    C = seismic["PGA"] * seismic["S"] * seismic["importance"] / 3.0   # behavior factor R=3
+    total_weight = (g_k + 0.3 * q_k) * design["total_gfa"]
+    C = seismic["PGA"] * seismic["S"] * seismic["importance"] / 3.0   # R=3
     V_base = C * total_weight
     seismic_force_per_column = V_base / design["structural"]["columns"]
-    # Check column capacity under seismic: simplified moment from lateral load
-    storey_height = 3.0
-    M_seismic = seismic_force_per_column * storey_height * floors   # moment at base column
+    M_seismic = seismic_force_per_column * 3.0 * floors   # kNm
 
-    if "Concrete" in material_frame:
-        col_side = 300
-        N_rd = 0.85 * 30 * col_side**2 / 1.5 / 1000
-        # simplified interaction: if N_ed/N_rd + M_seismic/(0.2*f_ck*col_side**3) > 1 then fail
-        # use crude check
-        M_rd_col = 0.15 * 30 * col_side**3 / 1e6   # kNm (very approx)
-        seismic_util = N_ed / N_rd + M_seismic / M_rd_col if M_rd_col > 0 else 1.0
-        col_status = "PASS (Seismic OK)" if seismic_util <= 1.0 else "FAIL (Seismic Demand Exceeds Capacity)"
-        col_label = f"Util = {seismic_util:.2f}"
-    elif "Steel" in material_frame:
-        # Steel column: use UC305x305x97 properties
-        A = 123e2  # mm²
-        fy = 275
-        N_rd_steel = A * fy / 1.0 / 1000
-        # Moment capacity approx
-        M_rd_steel = (Wpl * fy) / 1.0 / 1e6
-        seismic_util = N_ed / N_rd_steel + M_seismic / M_rd_steel
-        col_status = "PASS (Seismic OK)" if seismic_util <= 1.0 else "FAIL"
-        col_label = f"Util = {seismic_util:.2f}"
+    # interaction ratio
+    if M_rd_col > 0:
+        seismic_util = N_ed / N_rd + M_seismic / M_rd_col
     else:
-        # Timber column
-        b_col, h_col = 200, 200
-        A = b_col * h_col
-        f_c0k = 21.0
-        N_rd_timber = (k_mod * f_c0k / gamma_m) * A / 1000
-        seismic_util = N_ed / N_rd_timber + 0.2   # placeholder
-        col_status = "PASS" if seismic_util <= 1.0 else "FAIL"
-        col_label = f"Util = {seismic_util:.2f}"
+        seismic_util = 1.0
+    col_status = "PASS (Seismic OK)" if seismic_util <= 1.0 else "FAIL (Seismic Demand Exceeds)"
+    col_label = f"Util = {seismic_util:.2f}"
 
-    # ---------- AUTO-SIZED FOOTING ----------
+    # ------ AUTO-FOOTING ------
     soil = SOIL_PROFILES[soil_type]
     phi_rad = math.radians(soil["friction_angle"])
     n_q = (math.tan(math.pi/4 + phi_rad/2)**2) * math.exp(math.pi * math.tan(phi_rad))
@@ -386,11 +386,10 @@ def run_eurocode_analysis(design):
     n_gamma = 2 * (n_q + 1) * math.tan(phi_rad)
     d_footing = 1.2
     gamma_rv = 1.4
-
-    # Iterate to find minimum footing width
     b_footing = 1.0
     while b_footing <= 5.0:
-        q_ultimate = (1.3 * soil["cohesion"] * n_c + soil["unit_weight"] * d_footing * n_q + 0.4 * soil["unit_weight"] * b_footing * n_gamma)
+        q_ultimate = (1.3 * soil["cohesion"] * n_c + soil["unit_weight"] * d_footing * n_q +
+                      0.4 * soil["unit_weight"] * b_footing * n_gamma)
         q_rd = q_ultimate / gamma_rv
         applied_bearing = N_ed / (b_footing**2)
         if q_rd > applied_bearing:
@@ -405,25 +404,30 @@ def run_eurocode_analysis(design):
         "bending_label": bending_label,
         "v_ed": f"{v_ed:.1f} kN", "shear_rd": shear_label, "shear_status": shear_status,
         "uls_bending_status": "PASS" if m_rd > m_ed else "FAIL",
-        "deflection_limit": f"{allowable_deflection:.1f} mm", "calculated_deflection": f"{est_deflection:.1f} mm", "sls_status": sls_status,
+        "deflection_limit": f"{allowable_deflection:.1f} mm",
+        "calculated_deflection": f"{est_deflection:.1f} mm",
+        "sls_status": sls_status,
         "column_ed": f"{N_ed:.0f} kN", "column_util": col_label, "column_status": col_status,
-        "seismic_base_shear": f"{V_base:.0f} kN", "seismic_force_per_col": f"{seismic_force_per_column:.1f} kN",
-        "q_rd": f"{q_rd:.1f} kPa", "applied_bearing": f"{applied_bearing:.1f} kPa", "geo_status": geo_status,
+        "seismic_base_shear": f"{V_base:.0f} kN",
+        "seismic_force_per_col": f"{seismic_force_per_column:.1f} kN",
+        "q_rd": f"{q_rd:.1f} kPa", "applied_bearing": f"{applied_bearing:.1f} kPa",
+        "geo_status": geo_status,
         "footing_size": f"{footing_size} m × {footing_size} m"
     }
 
 # =========================================================
-# ZONING & BOQ (unchanged)
+# ZONING & BOQ
 # =========================================================
-
 def verify_zoning_laws(footprint, gfa, plot_size, domain):
     limits = ARCH_DOMAINS[domain]
     actual_cov = footprint / plot_size
     actual_far = gfa / plot_size
     return {
-        "coverage_pct": actual_cov*100, "max_coverage_pct": limits["max_coverage"]*100,
+        "coverage_pct": actual_cov*100,
+        "max_coverage_pct": limits["max_coverage"]*100,
         "coverage_status": "PASS" if actual_cov <= limits["max_coverage"] else "VIOLATION",
-        "far": actual_far, "max_far": limits["max_far"],
+        "far": actual_far,
+        "max_far": limits["max_far"],
         "far_status": "PASS" if actual_far <= limits["max_far"] else "VIOLATION"
     }
 
@@ -438,7 +442,8 @@ def compute_detailed_forex_boq(d, target_country):
     frame_desc = "Concrete" if "Concrete" in d["material_frame"] else ("Steel" if "Steel" in d["material_frame"] else "Timber")
     items = [
         ("Excavations", int(gfa*0.15), "m³", 150),
-        (f"Structural {frame_desc}", int(gfa*0.35) if "Concrete" in frame_desc else int(gfa*0.4), "m³" if "Concrete" in frame_desc else "Tons", 210 if "Concrete" in frame_desc else 950),
+        (f"Structural {frame_desc}", int(gfa*0.35) if "Concrete" in frame_desc else int(gfa*0.4),
+         "m³" if "Concrete" in frame_desc else "Tons", 210 if "Concrete" in frame_desc else 950),
         ("Reinforcement/Fasteners", int(gfa*0.35*0.12), "Tons", 1200),
         ("Blockwork", int(gfa*36), "Pcs", 2.5),
         ("Floor Finishes", int(gfa), "m²", 40),
@@ -460,10 +465,10 @@ def compute_detailed_forex_boq(d, target_country):
     return table, total_usd, total_local, fx
 
 # =========================================================
-# 2D BLUEPRINT with REBAR visualization
+# 2D BLUEPRINT (with rebar dots & compatibility)
 # =========================================================
-
 def draw_2d_blueprint(design, return_html=False):
+    design = ensure_design_compatibility(design)
     layout = design["layout"]
     nx, ny, span = layout["nx"], layout["ny"], design["structural"]["span"]
     grid = layout["grid"]
@@ -490,7 +495,6 @@ def draw_2d_blueprint(design, return_html=False):
             ctx.fillText("{room['name']}", {rx+8}, {ry+20});
             ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.font = "10px monospace";
             ctx.fillText("{room['w']}m x {room['h']}m", {rx+8}, {ry+34});
-            // Rebar dots
             ctx.fillStyle = "#ff6b35";
             for(let dx=0.15; dx<0.9; dx+=0.2) {{
                 for(let dy=0.15; dy<0.9; dy+=0.2) {{
@@ -539,10 +543,10 @@ def draw_2d_blueprint(design, return_html=False):
     st.components.v1.html(html, height=560)
 
 # =========================================================
-# 3D ISOMETRIC VIEW (unchanged)
+# 3D ISOMETRIC (compatibility)
 # =========================================================
-
 def draw_3d_isometric_view(design):
+    design = ensure_design_compatibility(design)
     nx, ny, span = design["layout"]["nx"], design["layout"]["ny"], design["structural"]["span"]
     floors = design["floors"]
     canvas_w, canvas_h = 800, 500
@@ -578,10 +582,10 @@ def draw_3d_isometric_view(design):
     st.components.v1.html(html, height=560)
 
 # =========================================================
-# EXPORT REPORT: Self-contained HTML with blueprint & passport
+# EXPORT REPORT
 # =========================================================
-
 def generate_report_html(design):
+    design = ensure_design_compatibility(design)
     analysis = run_eurocode_analysis(design)
     zoning = verify_zoning_laws(design["ground_footprint"], design["total_gfa"], design["plot_size"], design["domain"])
     boq, usd, local, fx = compute_detailed_forex_boq(design, design["country"])
@@ -596,7 +600,6 @@ def generate_report_html(design):
     .pass {{ color:#10b981; }} .fail {{ color:#ef4444; }}
     table {{ border-collapse:collapse; width:100%; margin:1rem 0; }}
     th,td {{ border:1px solid #334155; padding:0.5rem; text-align:left; }}
-    canvas {{ background:#040714; border-radius:12px; }}
 </style></head><body>
 <h1>ARC Studio Structural Report</h1>
 <p>Design ID: {design['id']} | {design['domain']} – {design['type']} | {design['floors']} storeys</p>
@@ -628,8 +631,7 @@ def generate_report_html(design):
 # =========================================================
 # SIDEBAR
 # =========================================================
-
-st.sidebar.markdown("<h1 style='color:#38bdf8;'>ARC STUDIO</h1><p style='color:#94a3b8;'>OCULUS RIFT v19.0</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<h1 style='color:#38bdf8;'>ARC STUDIO</h1><p style='color:#94a3b8;'>OCULUS RIFT v19.1</p>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 nav = st.sidebar.pills("🌐 Workspace", ["Control Hub", "Synthesis Lab"], default="Control Hub")
 st.sidebar.markdown("---")
@@ -659,7 +661,6 @@ trigger = st.sidebar.button("⚡ Execute Generation", type="primary", use_contai
 # =========================================================
 # MAIN INTERFACE
 # =========================================================
-
 if nav == "Control Hub":
     st.title("🌍 Regional Telemetry Dashboard")
     col1, col2, col3, col4 = st.columns(4)
@@ -686,7 +687,7 @@ elif nav == "Synthesis Lab":
             log_event(f"Generated #{design['id']}")
 
     if st.session_state.active_design:
-        d = st.session_state.active_design
+        d = ensure_design_compatibility(st.session_state.active_design)
         st.subheader(f"Active Design: {d['id']} — {d['type']}")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Region", d["country"])
@@ -718,7 +719,6 @@ elif nav == "Synthesis Lab":
             st.metric("Seismic Base Shear", analysis["seismic_base_shear"])
             st.metric("Force per Column", analysis["seismic_force_per_col"])
 
-            # Export Report
             report_html = generate_report_html(d)
             st.download_button("📥 Download Full Report (HTML)", report_html, file_name=f"ARC_Report_{d['id']}.html", mime="text/html")
 
@@ -773,11 +773,13 @@ elif nav == "Synthesis Lab":
             if len(designs) < 2:
                 st.info("Generate at least two designs to compare.")
             else:
-                selected_ids = st.multiselect("Select designs to compare", [d["id"] for d in designs], default=[designs[-1]["id"], designs[-2]["id"]] if len(designs)>=2 else None)
+                selected_ids = st.multiselect("Select designs to compare", [d["id"] for d in designs],
+                                              default=[designs[-1]["id"], designs[-2]["id"]] if len(designs)>=2 else None)
                 if selected_ids:
                     selected = [d for d in designs if d["id"] in selected_ids]
                     comp_data = []
                     for d_sel in selected:
+                        d_sel = ensure_design_compatibility(d_sel)
                         comp_data.append({
                             "ID": d_sel["id"],
                             "Type": d_sel["type"],
