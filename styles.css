@@ -1,0 +1,36 @@
+/* Simple responsive styles for the demo web app */
+:root{
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted:#6b7280;
+  --accent:#2563eb;
+  --radius:10px;
+}
+:root.dark{
+  --bg:#0b1220;
+  --fg:#e6eef8;
+  --muted:#9ca3af;
+  --accent:#60a5fa;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+body{background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased}
+.container{max-width:900px;margin:0 auto;padding:24px}
+.site-header{border-bottom:1px solid rgba(0,0,0,0.06)}
+.site-header .container{display:flex;align-items:center;justify-content:space-between}
+.logo{margin:0;font-size:1.25rem}
+.nav .btn{margin-left:8px}
+.hero{padding:36px 0}
+.hero h2{margin-top:0}
+.features{background:rgba(37,99,235,0.04);padding:18px;border-radius:var(--radius);margin-bottom:18px}
+.repo-info{white-space:pre-wrap;background:rgba(0,0,0,0.03);padding:12px;border-radius:8px}
+.contact form{display:grid;gap:8px;max-width:560px}
+.contact label{display:flex;flex-direction:column;font-size:0.95rem}
+input[type=text],input[type=email],textarea{padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);background:transparent;color:var(--fg)}
+.actions{display:flex;gap:8px}
+.btn{display:inline-block;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);background:transparent;color:var(--fg);cursor:pointer}
+.btn.small{padding:6px 8px;font-size:0.9rem}
+.btn.primary{background:var(--accent);color:white;border-color:transparent}
+.muted{color:var(--muted)}
+.site-footer{border-top:1px solid rgba(0,0,0,0.06);margin-top:24px;padding:12px 0;text-align:center}
+@media (max-width:600px){.container{padding:16px}.site-header .container{padding:8px 0}.hero{padding:20px 0}}
