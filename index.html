@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Arc — Demo Web App</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="repo" content="7mjnj2p27d/Arc">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="logo">Arc</h1>
+      <nav class="nav">
+        <button id="themeToggle" class="btn small">Toggle theme</button>
+        <a class="btn" href="https://github.com/7mjnj2p27d/Arc" target="_blank" rel="noopener">View on GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h2>Simple responsive single-page web app</h2>
+      <p>This demo site is committed to the <code>web-app</code> branch of your repository. It includes a small interactive UI and a contact form (no backend).</p>
+      <p><button id="showToast" class="btn primary">Show sample action</button></p>
+    </section>
+
+    <section class="features">
+      <h3>Features</h3>
+      <ul>
+        <li>Responsive layout (mobile-first)</li>
+        <li>Theme toggle (light / dark)</li>
+        <li>Contact form with client-side validation</li>
+        <li>Small demo action that fetches repo info from GitHub's public API</li>
+      </ul>
+      <pre id="repoInfo" class="repo-info">Repository info will appear here after clicking the action button.</pre>
+    </section>
+
+    <section class="contact">
+      <h3>Contact</h3>
+      <form id="contactForm">
+        <label>
+          Name
+          <input type="text" name="name" required />
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" required />
+        </label>
+        <label>
+          Message
+          <textarea name="message" rows="4" required></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn primary">Send (demo)</button>
+          <button type="reset" class="btn">Reset</button>
+        </div>
+      </form>
+      <p class="muted">This form is for demo purposes only — it will not send messages to a server.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>Made with ♥ — branch: <code>web-app</code></small>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
