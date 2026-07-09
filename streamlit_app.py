@@ -1,5 +1,5 @@
 # =========================================================
-# ARC — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
+# Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Galaxy UI, User Auth, Sai Engine
 # =========================================================
 
@@ -36,7 +36,7 @@ def to_display_area(m2):
 
 TRANSLATIONS = {
     "en": {
-        "sidebar_title": "ARC V3",
+        "sidebar_title": "Arc V3",
         "sidebar_subtitle": "Sai Engine & FX Studio",
         "studio_workspace": "Studio Workspace",
         "dashboard": "Control Hub Dashboard",
@@ -131,7 +131,7 @@ TRANSLATIONS = {
         "movement_arrows": "→ Movement flow"
     },
     "sw": {
-        "sidebar_title": "ARC V3",
+        "sidebar_title": "Arc V3",
         "sidebar_subtitle": "Injini ya Sai & FX Studio",
         "studio_workspace": "Nafasi ya Kazi",
         "dashboard": "Dashibodi ya Udhibiti",
@@ -1018,7 +1018,7 @@ div[data-baseweb="radio"] label, div[data-baseweb="checkbox"] label { color: #c7
 .stDataFrame { background: rgba(15,23,42,0.5); }
 </style>
 """
-st.set_page_config(page_title="ARC – Sai Engine", page_icon="🌌", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Arc – Sai Engine", page_icon="🌌", layout="wide", initial_sidebar_state="expanded")
 st.markdown(GALAXY_CSS, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
@@ -1043,7 +1043,7 @@ if not load_users():
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<h1 style='text-align:center; color:#c084fc;'>🌌 ARC STATION</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align:center; color:#c084fc;'>🌌 Arc Station</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align:center; color:#a78bfa;'>Sai Engine & Cosmic Architecture</p>", unsafe_allow_html=True)
         with st.form("auth_form"):
             username = st.text_input("Username")
@@ -1085,7 +1085,7 @@ mem = st.session_state.memory
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:1.4rem; font-weight:700; color:#c084fc;">🌌 ARC</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#c084fc;">🌌 Arc</div>
         <div style="font-size:0.8rem; color:#94a3b8;">👤 {username} | Lvl {user_data['level']}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -1471,7 +1471,7 @@ elif nav_page == t("generative"):
             } for c in st.session_state.generated_concepts])
             csv = export_df.to_csv(index=False).encode()
             st.download_button(t("export_csv"), data=csv, file_name="arc_all_concepts.csv", mime="text/csv", use_container_width=True)
-            report_str = f"# ARC Design Report\n\n"
+            report_str = f"# Arc Design Report\n\n"
             report_str += f"**Concept Alpha** | {asset['type']} | {asset['country']}\n\n"
             report_str += f"- GFA: {asset['total_gfa']} m² ({round(asset['total_gfa']*M2_TO_FT2,1)} sq ft)\n"
             report_str += f"- Floors: {asset['floors']}\n"
