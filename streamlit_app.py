@@ -13,8 +13,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
-import requests
-from plotly.subplots import make_subplots
 
 # ═══════════════════════════════════════════════════════
 # 0. TRANSLATION DICTIONARIES + UNIT CONVERSION
