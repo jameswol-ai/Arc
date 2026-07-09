@@ -1,4 +1,3 @@
-
 # =========================================================
 # ARC — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Galaxy UI, User Auth, Sai Engine
