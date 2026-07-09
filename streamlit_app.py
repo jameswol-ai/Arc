@@ -1,6 +1,7 @@
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Galaxy UI, User Auth, Sai Engine
+# Version 3.1 – Soil‑aware, Arc AI Dashboard, Error‑free
 # =========================================================
 
 import streamlit as st
@@ -9,6 +10,10 @@ import random
 import uuid
 import time
 import hashlib
+import requests                     # ✅ added
+import plotly.express as px         # ✅ added
+import plotly.graph_objects as go   # ✅ added
+from plotly.subplots import make_subplots  # ✅ added
 from pathlib import Path
 from datetime import datetime, timedelta
 import numpy as np
@@ -44,6 +49,10 @@ TRANSLATIONS = {
         "plot_area": "Plot Area (m²)",
         "floors": "Building Height Limit (Floors)",
         "bathrooms": "Total Bathroom Batteries",
+        "soil_type": "🌱 Soil Condition",
+        "soil_soft": "Soft Clay / Silt",
+        "soil_medium": "Medium Sand / Gravel",
+        "soil_rock": "Rock / Laterite",
         "ai_weights": "⚖️ AI Agent Weights",
         "arch_weight": "Architect Weight",
         "struct_weight": "Structural Weight",
@@ -57,10 +66,10 @@ TRANSLATIONS = {
         "no_designs": "No designs archived yet...",
         "welcome": "Welcome back, Architect 👋",
         "tagline": "Create. Evolve. Perfect.",
-        "live_fx": "💹 LIVE RANDOM FX INDICES",
+        "live_fx": "💹 LIVE FX RATES",
         "kes_history": "📈 KES/USD History (60 days)",
-        "simulated": "Simulated Random Walk",
         "real_data": "Real Data + Indicators",
+        "simulated": "Simulated Random Walk",
         "total_blueprints": "Total Blueprints Saved",
         "arch_concepts": "Architectural Concepts",
         "pipeline_logs": "Pipeline Logs",
@@ -124,7 +133,14 @@ TRANSLATIONS = {
         "floor_area_line": "Floor Area: {fa_m} m² ({fa_ft} sq ft)",
         "plot_area_caption": "= {area_ft} sq ft",
         "grid_label": "Grid: {span_m} m × {span_m} m",
-        "movement_arrows": "→ Movement flow"
+        "movement_arrows": "→ Movement flow",
+        "arc_ai_insights": "🌍 Arc AI Country Insights",
+        "insight_kenya": "Kenya – High urban demand in Nairobi. Stable KES, cement readily available. Soil mostly red coffee clay → deep foundations recommended.",
+        "insight_uganda": "Uganda – Growing Kampala metro. Currency moderately volatile. Predominant lateritic soils, low bearing capacity in wetlands.",
+        "insight_tanzania": "Tanzania – Dar es Salaam boom. TZS relatively stable. Coastal sands and coral limestone; corrosion‑resistant steel advised.",
+        "insight_ssudan": "South Sudan – Oil‑driven Juba expansion. Extreme FX volatility. Black cotton soil → expensive raft foundations.",
+        "insight_rwanda": "Rwanda – Kigali smart‑city projects. RWF steady. Volcanic soils, excellent bearing capacity.",
+        "insight_ethiopia": "Ethiopia – Addis Ababa high‑rise surge. ETB under pressure. Predominantly clayey soils, need controlled fill.",
     },
     "sw": {
         "sidebar_title": "Arc V3",
@@ -139,6 +155,10 @@ TRANSLATIONS = {
         "plot_area": "Eneo la Kiwanja (m²)",
         "floors": "Upeo wa Idadi ya Sakafu",
         "bathrooms": "Idadi ya Vyoo",
+        "soil_type": "🌱 Hali ya Udongo",
+        "soil_soft": "Udongo Laini / Tope",
+        "soil_medium": "Mchanga wa Kati / Changarawe",
+        "soil_rock": "Mwamba / Laterite",
         "ai_weights": "⚖️ Vipimo vya AI",
         "arch_weight": "Uzito wa Usanifu",
         "struct_weight": "Uzito wa Muundo",
@@ -154,8 +174,8 @@ TRANSLATIONS = {
         "tagline": "Unda. Boresha. Kamilisha.",
         "live_fx": "💹 VIASHIRIA VYA FEDHA LIVE",
         "kes_history": "📈 Historia ya KES/USD (Siku 60)",
-        "simulated": "Mwelekeo wa Kubuniwa",
         "real_data": "Takwimu Halisi + Viashiria",
+        "simulated": "Mwelekeo wa Kubuniwa",
         "total_blueprints": "Ramani Zilizohifadhiwa",
         "arch_concepts": "Dhana za Usanifu",
         "pipeline_logs": "Kumbukumbu za Matukio",
@@ -219,7 +239,14 @@ TRANSLATIONS = {
         "floor_area_line": "Eneo la Sakafu: {fa_m} m² ({fa_ft} sq ft)",
         "plot_area_caption": "= {area_ft} sq ft",
         "grid_label": "Gridi: {span_m} m × {span_m} m",
-        "movement_arrows": "→ Mwelekeo wa harakati"
+        "movement_arrows": "→ Mwelekeo wa harakati",
+        "arc_ai_insights": "🌍 Maarifa ya Arc AI kwa Nchi",
+        "insight_kenya": "Kenya – Mahitaji makubwa ya mijini Nairobi. KES imara, saruji inapatikana kwa urahisi. Udongo mwingi wa kafe nyekundu → misingi ya kina inapendekezwa.",
+        "insight_uganda": "Uganda – Ukuaji wa mji mkuu Kampala. Sarafu inabadilika kwa wastani. Udongo wa laterite mwingi, uwezo mdogo wa kubeba katika maeneo ya mvua.",
+        "insight_tanzania": "Tanzania – Ukuaji wa Dar es Salaam. TZS imara kiasi. Mchanga wa pwani na chokaa ya matumbawe; chuma kinachostahimili kutu kinashauriwa.",
+        "insight_ssudan": "Sudan Kusini – Upanuzi wa Juba unaotokana na mafuta. Tete la sarafu kubwa. Udongo mweusi wa pamba → misingi ya raft ghali.",
+        "insight_rwanda": "Rwanda – Miradi ya jiji la Kigali. RWF thabiti. Udongo wa volkano, uwezo bora wa kubeba.",
+        "insight_ethiopia": "Ethiopia – Kuongezeka kwa majengo marefu Addis Ababa. ETB chini ya shinikizo. Udongo wa kifusi, unahitaji kujaza kudhibitiwa.",
     }
 }
 
@@ -340,7 +367,7 @@ def log_event(username: str, memory: dict, msg: str):
     save_memory(username, memory)
 
 # ═══════════════════════════════════════════════════════
-# 3. SAI ENGINE FUNCTIONS (more randomness)
+# 3. SAI ENGINE FUNCTIONS (soil‑aware, isolated random)
 # ═══════════════════════════════════════════════════════
 ARCH_DOMAINS = {
     "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
@@ -348,17 +375,25 @@ ARCH_DOMAINS = {
     "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
 }
 
-def generate_spatial_model(domain, btype, plot_size, floors, target_bathrooms, target_country, seed=0):
-    random.seed(seed if seed else int(time.time()))
-    plot_size = max(200, plot_size + random.randint(-300, 300))
-    max_footprint = int(plot_size * random.uniform(0.5, 0.75))
-    floor_area = min(max_footprint, random.randint(100, int(max_footprint * 1.3)))
+# Soil multiplier for substructure cost & structural adjustments
+SOIL_MULTIPLIERS = {
+    "soft":   1.6,   # soft clay/silt → deeper foundations, more concrete
+    "medium": 1.0,   # sand/gravel baseline
+    "rock":   0.7,   # rock – cheaper excavation
+}
+
+def generate_spatial_model(domain, btype, plot_size, floors, target_bathrooms, target_country, soil_type, seed=0):
+    """Uses isolated random generator so global state is unaffected."""
+    rng = random.Random(seed if seed else int(time.time()))
+    plot_size = max(200, plot_size + rng.randint(-300, 300))
+    max_footprint = int(plot_size * rng.uniform(0.5, 0.75))
+    floor_area = min(max_footprint, rng.randint(100, int(max_footprint * 1.3)))
     total_gfa = floor_area * floors
 
     span_length = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
-    span_length *= random.uniform(0.85, 1.15)
-    col_count = max(8, int((floor_area / (span_length * 5.0)) * random.uniform(3, 5)))
-    beam_count = int(col_count * random.uniform(1.5, 2.2))
+    span_length *= rng.uniform(0.85, 1.15)
+    col_count = max(8, int((floor_area / (span_length * 5.0)) * rng.uniform(3, 5)))
+    beam_count = int(col_count * rng.uniform(1.5, 2.2))
 
     rooms = [
         {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#1e293b"},
@@ -366,23 +401,23 @@ def generate_spatial_model(domain, btype, plot_size, floors, target_bathrooms, t
     ]
 
     if domain == "Residential":
-        rooms.append({"name": "Grand Living Room", "type": "Living Room", "w": random.uniform(6, 8), "h": random.uniform(5, 6), "color": "#0d2040"})
-        rooms.append({"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": random.uniform(4, 5), "h": random.uniform(3.5, 4.5), "color": "#053020"})
-        bedroom_count = max(1, int(total_gfa / random.randint(60, 90)))
+        rooms.append({"name": "Grand Living Room", "type": "Living Room", "w": rng.uniform(6, 8), "h": rng.uniform(5, 6), "color": "#0d2040"})
+        rooms.append({"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#053020"})
+        bedroom_count = max(1, int(total_gfa / rng.randint(60, 90)))
         for i in range(bedroom_count):
-            rooms.append({"name": f"Master Suite {i+1}", "type": "Bedroom", "w": random.uniform(4, 5), "h": random.uniform(3.5, 4.5), "color": "#2a0f4d"})
+            rooms.append({"name": f"Master Suite {i+1}", "type": "Bedroom", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#2a0f4d"})
     elif domain == "Commercial":
-        rooms.append({"name": "Co-Working Hub Suite", "type": "Office Space", "w": random.uniform(10, 14), "h": random.uniform(7, 9), "color": "#075e8a"})
-        rooms.append({"name": "Executive Dialogue Hall", "type": "Conference", "w": random.uniform(5, 7), "h": random.uniform(4, 6), "color": "#1e1b4b"})
+        rooms.append({"name": "Co-Working Hub Suite", "type": "Office Space", "w": rng.uniform(10, 14), "h": rng.uniform(7, 9), "color": "#075e8a"})
+        rooms.append({"name": "Executive Dialogue Hall", "type": "Conference", "w": rng.uniform(5, 7), "h": rng.uniform(4, 6), "color": "#1e1b4b"})
     else:
-        rooms.append({"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": random.uniform(16, 20), "h": random.uniform(10, 14), "color": "#3b0764"})
-        rooms.append({"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": random.uniform(7, 9), "h": random.uniform(7, 9), "color": "#451a03"})
+        rooms.append({"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#3b0764"})
+        rooms.append({"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#451a03"})
 
     for b in range(target_bathrooms):
-        rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": random.uniform(2.5, 3.5), "h": random.uniform(2, 3), "color": "#4a2306"})
+        rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2306"})
 
-    doors = len(rooms) + floors * random.randint(1, 3)
-    windows = max(4, int(total_gfa / random.randint(12, 20)))
+    doors = len(rooms) + floors * rng.randint(1, 3)
+    windows = max(4, int(total_gfa / rng.randint(12, 20)))
 
     return {
         "id": str(uuid.uuid4())[:8].upper(),
@@ -396,6 +431,7 @@ def generate_spatial_model(domain, btype, plot_size, floors, target_bathrooms, t
         "doors": doors,
         "windows": windows,
         "country": target_country,
+        "soil_type": soil_type,
         "structural": {
             "columns": int(col_count * floors),
             "beams": int(beam_count * floors),
@@ -456,7 +492,7 @@ def calculate_ai_scores(asset, ec_result, total_usd, prompt_keywords=None, weigh
     return arch_score, struct_score, sustain_score, cost_score, composite
 
 # ═══════════════════════════════════════════════════════
-# 4. FOREX MODULE
+# 4. FOREX MODULE (cached initialization)
 # ═══════════════════════════════════════════════════════
 STATIC_FX_RATES = {
     "Kenya":       129.49,
@@ -496,6 +532,7 @@ def _fetch_live_rates():
     except:
         return None
 
+@st.cache_resource
 def initialize_fx_rates():
     live = _fetch_live_rates()
     for country, info in _BASE_FX_DATA.items():
@@ -508,24 +545,13 @@ def initialize_fx_rates():
             "multiplier": info["multiplier"],
             "region": info["region"],
         }
-
-def reset_rates_to_baseline():
-    for country in _BASELINE_RATES:
-        _CURRENT_RATES[country] = _BASELINE_RATES[country]
-
-def simulate_random_fx(base_rate, volatility=0.02):
-    return base_rate * (1 + random.gauss(0, volatility))
+    return _CURRENT_RATES, _BASELINE_RATES, _CURRENCY_INFO
 
 def get_fx_data(country):
-    info = _CURRENCY_INFO[country].copy()
-    info["rate"] = _CURRENT_RATES[country]
-    return info
+    return _CURRENCY_INFO[country].copy() | {"rate": _CURRENT_RATES[country]}
 
 def get_rate(country):
     return _CURRENT_RATES[country]
-
-def get_baseline_rate(country):
-    return _BASELINE_RATES[country]
 
 def set_rate(country, new_rate):
     _CURRENT_RATES[country] = new_rate
@@ -550,12 +576,16 @@ def compute_forex_boq(d, target_country):
     fx_data = get_fx_data(target_country)
     fx_rate = fx_data["rate"]
     regional_multiplier = fx_data["multiplier"]
+    soil_mult = SOIL_MULTIPLIERS.get(d.get("soil_type", "medium"), 1.0)
+
     conc_qty = int(gfa * 0.35)
     steel_qty = int(conc_qty * 0.12)
     brick_qty = int(gfa * 38)
     finish_qty = int(gfa)
+
+    # Substructure cost influenced by soil
     base_usd_items = [
-        ("Substructure Earth Excavations", int(gfa * 0.15), 150),
+        ("Substructure Earth Excavations", int(gfa * 0.15), 150 * soil_mult),
         ("Structural C30 Concrete", conc_qty, 210),
         ("Tensile Steel Bars (B500B)", steel_qty, 1200),
         ("Blockwork Masonry", brick_qty, 2.5),
@@ -570,10 +600,11 @@ def compute_forex_boq(d, target_country):
     grand_total_local = grand_total_usd * fx_rate
     return grand_total_usd, grand_total_local, fx_data
 
+# Call initialization once
 initialize_fx_rates()
 
 # ═══════════════════════════════════════════════════════
-# 5. GANTT & REAL FX INDICATORS
+# 5. GANTT & REAL FX INDICATORS (unchanged, but stable)
 # ═══════════════════════════════════════════════════════
 def generate_gantt_chart(asset):
     gfa = asset["total_gfa"]
@@ -611,6 +642,7 @@ def generate_gantt_chart(asset):
     )
     return fig
 
+@st.cache_data(ttl=3600)
 def fetch_historical_fx_kes(start_date, end_date):
     try:
         url = f"https://api.exchangerate.host/timeseries?start_date={start_date}&end_date={end_date}&base=USD&symbols=KES"
@@ -625,7 +657,7 @@ def fetch_historical_fx_kes(start_date, end_date):
                     dates.append(date_str)
                     values.append(currencies["KES"])
             return pd.DataFrame({"Date": pd.to_datetime(dates), "Rate": values})
-    except Exception as e:
+    except:
         pass
     return None
 
@@ -665,9 +697,8 @@ def plot_real_fx_with_indicators(df):
     return fig
 
 # ═══════════════════════════════════════════════════════
-# 6. RENDERERS (2D floor plan with doors, walls, movement)
+# 6. RENDERERS (unchanged except for minor format)
 # ═══════════════════════════════════════════════════════
-
 def render_floorplan_diagram(plan, span=6.0):
     corridor = None
     stairs = None
@@ -922,8 +953,9 @@ def get_boq_table(asset):
     gfa = asset["total_gfa"]
     fx = asset["fx"]
     multiplier = fx["multiplier"]
+    soil_mult = SOIL_MULTIPLIERS.get(asset.get("soil_type", "medium"), 1.0)
     items = [
-        ("Substructure Excavations", int(gfa*0.15), 150),
+        ("Substructure Excavations", int(gfa*0.15), 150 * soil_mult),
         ("C30 Concrete (m³)", int(gfa*0.35), 210),
         ("Steel Rebar (kg)", int(gfa*0.35*0.12), 1200),
         ("Blockwork (units)", int(gfa*38), 2.5),
@@ -955,7 +987,7 @@ def describe_concept(asset):
         return f"{asset['type']}, {asset['floors']}-storey, {len(asset['plan'])} rooms, located in {asset['country']}. {t('gfa_line', gfa_m=gfa_m, gfa_ft=gfa_ft)}"
 
 # ═══════════════════════════════════════════════════════
-# 7. GALAXY THEME CSS
+# 7. GALAXY THEME CSS (unchanged)
 # ═══════════════════════════════════════════════════════
 GALAXY_CSS = """
 <style>
@@ -1132,6 +1164,15 @@ with st.sidebar:
             st.caption(t("plot_area_caption", area_ft=area_ft))
         input_floors = st.slider(t("floors"), 1, 12, 3)
         input_baths = st.slider(t("bathrooms"), 1, 10, 2)
+        # --- Soil type selector ---
+        soil_labels = {
+            "soft": t("soil_soft"),
+            "medium": t("soil_medium"),
+            "rock": t("soil_rock")
+        }
+        soil_options = list(soil_labels.keys())
+        selected_soil_label = st.selectbox(t("soil_type"), [soil_labels[s] for s in soil_options])
+        selected_soil = soil_options[[soil_labels[s] for s in soil_options].index(selected_soil_label)]
 
     with st.expander(t("ai_weights"), expanded=False):
         w_arch = st.slider(t("arch_weight"), 0.0, 1.0, 0.25, 0.05)
@@ -1146,6 +1187,7 @@ with st.sidebar:
 
     with st.expander(t("forex_converter"), expanded=False):
         if st.button(t("refresh_fx"), use_container_width=True):
+            initialize_fx_rates.clear()
             initialize_fx_rates()
             st.rerun()
         currencies = ["USD"] + get_all_countries()
@@ -1187,7 +1229,7 @@ with st.sidebar:
         st.rerun()
 
 # ═══════════════════════════════════════════════════════
-# 11. DASHBOARD PAGE
+# 11. DASHBOARD PAGE (Arc AI Insights)
 # ═══════════════════════════════════════════════════════
 if nav_page == t("dashboard"):
     st.markdown(f"""
@@ -1197,6 +1239,7 @@ if nav_page == t("dashboard"):
     </div>
     """, unsafe_allow_html=True)
 
+    # Live FX rates grid
     st.markdown(f"### {t('live_fx')}")
     fx_cols = st.columns(6)
     for i, country in enumerate(get_all_countries()):
@@ -1210,28 +1253,43 @@ if nav_page == t("dashboard"):
             </div>
             """, unsafe_allow_html=True)
 
+    # Arc AI Insights – replaces the old simulated random walk
+    st.markdown(f"### {t('arc_ai_insights')}")
+    insight_keys = {
+        "Kenya": "insight_kenya",
+        "Uganda": "insight_uganda",
+        "Tanzania": "insight_tanzania",
+        "South Sudan": "insight_ssudan",
+        "Rwanda": "insight_rwanda",
+        "Ethiopia": "insight_ethiopia"
+    }
+    # Show three insights per row
+    countries = list(insight_keys.keys())
+    for i in range(0, len(countries), 3):
+        cols = st.columns(3)
+        for j, country in enumerate(countries[i:i+3]):
+            with cols[j]:
+                st.markdown(f"""
+                <div class="glass-panel" style="padding: 16px; height: 180px;">
+                    <div style="font-weight: 600; color: #c084fc; margin-bottom: 6px;">{country}</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">{t(insight_keys[country])}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    # KES/USD real chart if available
     with st.expander(t("kes_history"), expanded=False):
-        tab1, tab2 = st.tabs([t("real_data"), t("simulated")])
-        with tab1:
-            end_date = datetime.today()
-            start_date = end_date - timedelta(days=60)
-            df_real = fetch_historical_fx_kes(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-            if df_real is not None and not df_real.empty:
-                fig_real = plot_real_fx_with_indicators(df_real)
-                if fig_real: st.plotly_chart(fig_real, use_container_width=True, key="real_fx_indicators")
-                else: st.warning("Could not plot real data.")
+        end_date = datetime.today()
+        start_date = end_date - timedelta(days=60)
+        df_real = fetch_historical_fx_kes(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        if df_real is not None and not df_real.empty:
+            fig_real = plot_real_fx_with_indicators(df_real)
+            if fig_real:
+                st.plotly_chart(fig_real, use_container_width=True, key="real_fx_indicators")
             else:
-                st.warning("Unable to fetch real KES/USD data. Showing simulated instead.")
-                start_rate = get_fx_data("Kenya")["rate"]
-                np.random.seed(42)
-                random_steps = np.random.normal(0, 0.008, 60)
-                rates = [start_rate]
-                for step in random_steps: rates.append(rates[-1] * (1 + step))
-                fx_df = pd.DataFrame({"Day": range(len(rates)), "KES/USD": rates})
-                fig_sim_fallback = px.line(fx_df, x="Day", y="KES/USD", title=t("simulated"))
-                fig_sim_fallback.update_traces(line_color="#38bdf8")
-                st.plotly_chart(fig_sim_fallback, use_container_width=True, key="sim_fallback_chart")
-        with tab2:
+                st.warning("Could not plot real data.")
+        else:
+            st.info("Real KES/USD data currently unavailable – showing simulated trend.")
             start_rate = get_fx_data("Kenya")["rate"]
             np.random.seed(42)
             random_steps = np.random.normal(0, 0.008, 60)
@@ -1240,7 +1298,7 @@ if nav_page == t("dashboard"):
             fx_df = pd.DataFrame({"Day": range(len(rates)), "KES/USD": rates})
             fig_sim = px.line(fx_df, x="Day", y="KES/USD", title=t("simulated"))
             fig_sim.update_traces(line_color="#38bdf8")
-            st.plotly_chart(fig_sim, use_container_width=True, key="sim_main_chart")
+            st.plotly_chart(fig_sim, use_container_width=True, key="sim_fallback_chart")
 
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
@@ -1258,7 +1316,7 @@ if nav_page == t("dashboard"):
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
-# 12. GENERATIVE ENGINE PAGE (no tag buttons, improved 2D)
+# 12. GENERATIVE ENGINE PAGE (soil‑aware, stable)
 # ═══════════════════════════════════════════════════════
 elif nav_page == t("generative"):
     st.markdown(f"""
@@ -1287,9 +1345,12 @@ elif nav_page == t("generative"):
                 mut_plot = input_plot + random.randint(-400, 400)
                 mut_floors = max(1, input_floors + random.randint(-2, 2))
                 mut_rooms = max(1, input_baths + random.randint(-2, 2))
-                d = generate_spatial_model(select_domain, select_type, mut_plot, mut_floors, mut_rooms, select_country, seed=i)
+                d = generate_spatial_model(select_domain, select_type, mut_plot, mut_floors, mut_rooms,
+                                           select_country, selected_soil, seed=i)
                 d["plan"] = d["rooms"]
+                # Compute analysis once and store
                 ec = run_eurocode_analysis(d, d["domain"])
+                d["eurocode"] = ec
                 total_usd, total_local, fx = compute_forex_boq(d, d["country"])
                 arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, prompt, weights)
                 d["scores"] = {"arch": arch, "struct": struct, "sust": sust, "cost": cost, "composite": comp}
@@ -1300,7 +1361,7 @@ elif nav_page == t("generative"):
             concepts.sort(key=lambda x: x["scores"]["composite"], reverse=True)
             st.session_state.generated_concepts = concepts
             st.session_state.active_design = concepts[0]
-            log_event(username, mem, f"Sai Engine spawned 5 new architectural concepts. Alpha: {concepts[0]['id']}")
+            log_event(username, mem, f"Sai Engine spawned 5 new concepts. Alpha: {concepts[0]['id']}")
             leveled_up = add_xp(username, 20)
             st.session_state.user_data = get_user(username)
             if leveled_up: st.balloons()
@@ -1318,6 +1379,7 @@ elif nav_page == t("generative"):
         for idx, (tab, c) in enumerate(zip(tabs, st.session_state.generated_concepts)):
             with tab:
                 sc = c["scores"]
+                ec = c["eurocode"]  # stored analysis
                 st.markdown(f"**{t('description_prefix')}** {describe_concept(c)}")
                 col1, col2 = st.columns([3, 2])
                 with col1:
@@ -1398,7 +1460,7 @@ elif nav_page == t("generative"):
                 log_event(username, mem, f"Saved design {asset['id']} to library")
                 st.success(t("saved_success"))
         sc_a = asset["scores"]
-        ec_a = run_eurocode_analysis(asset, asset['domain'])
+        ec_a = asset["eurocode"]  # reuse stored analysis
         a1, a2, a3, a4 = st.columns(4)
         with a1:
             st.markdown(f"""
@@ -1453,6 +1515,7 @@ elif nav_page == t("generative"):
                 "ID": c["id"],
                 "Type": c["type"],
                 "Country": c["country"],
+                "Soil": c.get("soil_type", "medium"),
                 "GFA (m²)": c["total_gfa"],
                 "GFA (ft²)": round(c["total_gfa"] * M2_TO_FT2, 1),
                 "Floors": c["floors"],
@@ -1468,7 +1531,7 @@ elif nav_page == t("generative"):
             csv = export_df.to_csv(index=False).encode()
             st.download_button(t("export_csv"), data=csv, file_name="arc_all_concepts.csv", mime="text/csv", use_container_width=True)
             report_str = f"# Arc Design Report\n\n"
-            report_str += f"**Concept Alpha** | {asset['type']} | {asset['country']}\n\n"
+            report_str += f"**Concept Alpha** | {asset['type']} | {asset['country']} | Soil: {asset.get('soil_type','medium')}\n\n"
             report_str += f"- GFA: {asset['total_gfa']} m² ({round(asset['total_gfa']*M2_TO_FT2,1)} sq ft)\n"
             report_str += f"- Floors: {asset['floors']}\n"
             report_str += f"- Rooms: {len(asset['plan'])}\n"
