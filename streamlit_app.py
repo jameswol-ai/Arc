@@ -1,4 +1,3 @@
-
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Minimal Logo, Region‑Based Soils,
@@ -86,7 +85,7 @@ def log_event(username, mem, msg):
     mem["logs"].append({"time": datetime.now().isoformat(), "msg": msg})
     save_memory(username, mem)
 
-# ════════════════  REGION SOILS  ════════════════
+# ════════════════  REGION SOILS (Nairobi, Kampala, Juba highlighted)  ════════════════
 REGION_SOIL_MAP = {
     "Kenya":       ("Nairobi Red Coffee Clay / Volcanic Loam", "medium"),
     "Uganda":      ("Kampala Red Lateritic Clay / Wetland Silts", "soft"),
@@ -105,7 +104,7 @@ ARCH_DOMAINS = {
 }
 
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_cat, seed=0):
-    rng = random.Random(seed or int(time.time()))
+    rng = random.Random(seed)                     # fixed: directly use seed (0 is valid)
     plot = max(200, plot_size + rng.randint(-300, 300))
     max_fp = int(plot * rng.uniform(0.5, 0.75))
     fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
@@ -431,7 +430,7 @@ if not st.session_state.logged_in:
                     except ValueError as e: st.error(str(e))
     st.stop()
 
-# ════════════════  SIDEBAR – No prompt, no project memory  ════════════════
+# ════════════════  SIDEBAR  ════════════════
 username = st.session_state.username; user = st.session_state.user_data; mem = st.session_state.memory
 
 with st.sidebar:
@@ -453,7 +452,7 @@ with st.sidebar:
         if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
-        # Soil
+        # Soil – region‑specific (Nairobi, Kampala, Juba etc.)
         desc, def_cat = REGION_SOIL_MAP.get(country, ("Unknown", "medium"))
         cat_opts = ["soft", "medium", "rock"]
         labels = {"soft":"Soft Clay/Silt", "medium":"Medium Sand/Gravel", "rock":"Rock/Laterite"}
