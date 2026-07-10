@@ -245,13 +245,25 @@ def forest(base, days=7, paths=100, vol=0.008):
     paths = np.cumprod(1 + np.array(p), axis=1) * base
     fig = go.Figure()
     x = list(range(1, days+1))
-    for perc in [95, 80, 50]:
+    # Beautiful blue gradient bands
+    band_colors = [
+        (95, "rgba(70, 130, 200, 0.08)"),
+        (80, "rgba(70, 130, 200, 0.15)"),
+        (50, "rgba(70, 130, 200, 0.25)")
+    ]
+    for perc, fill_color in band_colors:
         lower = np.percentile(paths, (100-perc)/2, axis=0)
-        upper = np.percentile(100 - (100-perc)/2, axis=0)
+        upper = np.percentile(paths, 100 - (100-perc)/2, axis=0)   # ← FIXED LINE
         fig.add_trace(go.Scatter(x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False))
-        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=f'rgba(100,100,100,{0.1*(3-perc/50)})', line=dict(width=0), name=f'{perc}%'))
-    fig.add_trace(go.Scatter(x=x, y=np.median(paths, axis=0), mode='lines+markers', name='Median', line=dict(color='#cccccc')))
-    fig.update_layout(title="Weekly Forecast", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa', margin=dict(l=20,r=20,t=40,b=20))
+        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=fill_color,
+                                 line=dict(width=0), name=f'{perc}% confidence'))
+    median = np.median(paths, axis=0)
+    fig.add_trace(go.Scatter(x=x, y=median, mode='lines+markers', name='Median',
+                             line=dict(color='#7bb8ff', width=2.5),
+                             marker=dict(color='#b0d0ff', size=6)))
+    fig.update_layout(title="Weekly Forecast", plot_bgcolor='rgba(0,0,0,0)',
+                      paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa',
+                      margin=dict(l=20,r=20,t=40,b=20), legend=dict(orientation="h", yanchor="bottom", y=1.02))
     return fig
 
 # ════════════════  RAM AI  ════════════════
@@ -457,6 +469,7 @@ with st.sidebar:
         if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
+        # East African soil selection
         desc, def_cat = REGION_SOIL_MAP.get(country, ("Unknown", "medium"))
         cat_opts = ["soft", "medium", "rock"]
         labels = {"soft":"Soft Clay/Silt", "medium":"Medium Sand/Gravel", "rock":"Rock/Laterite"}
@@ -531,18 +544,14 @@ if nav == "Dashboard":
             st.info("Live data unavailable – showing simulated trends.")
             base_rates = {c: _CURRENT_RATES[c] for c in get_all_countries()}
             sim = {}
-            # Generate 61 dates (from start to end, 60 days after start = 61 dates)
             dates = [start_date + timedelta(days=i) for i in range(61)]
             for c, r in base_rates.items():
                 rng = np.random.default_rng(42)
-                # One fewer step than dates, because we start from the first date's rate
-                steps = rng.normal(0, 0.005, len(dates) - 1)
+                steps = rng.normal(0, 0.005, len(dates)-1)
                 vals = [r]
                 for s in steps:
                     vals.append(vals[-1] * (1 + s))
-                # drop the initial rate, keeping the 60 subsequent values
                 sim[c] = vals[1:]
-            # Use dates[1:] (60 entries) to align with the 60 simulated values
             df_sim = pd.DataFrame(sim, index=dates[1:])
             st.plotly_chart(plot_hist(df_sim), use_container_width=True)
     st.markdown("---")
