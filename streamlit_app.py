@@ -178,7 +178,6 @@ BASE_FX = {
     "Tanzania": ("TZS","TSh",0.98,"East Africa"), "South Sudan": ("SSP","SSP",1.35,"East Africa"),
     "Rwanda": ("RWF","FRw",0.85,"Central Africa"), "Ethiopia": ("ETB","Br",0.80,"Horn of Africa")
 }
-_CURRENT_RATES, _BASELINE_RATES, _CURRENCY_INFO = {}, {}, {}
 
 def _fetch_live():
     try:
@@ -190,12 +189,18 @@ def _fetch_live():
 @st.cache_resource
 def init_fx():
     live = _fetch_live()
+    current_rates = {}
+    baseline_rates = {}
+    currency_info = {}
     for c, (cur, sym, mult, reg) in BASE_FX.items():
         rate = live.get(c, STATIC_FX[c])
-        _CURRENT_RATES[c] = rate
-        _BASELINE_RATES[c] = rate * random.uniform(0.995, 1.005)
-        _CURRENCY_INFO[c] = {"currency": cur, "symbol": sym, "multiplier": mult, "region": reg}
-    return _CURRENT_RATES
+        current_rates[c] = rate
+        baseline_rates[c] = rate * random.uniform(0.995, 1.005)
+        currency_info[c] = {"currency": cur, "symbol": sym, "multiplier": mult, "region": reg}
+    return current_rates, baseline_rates, currency_info
+
+# Every rerun reassigns the globals with cached (or freshly generated) data
+_CURRENT_RATES, _BASELINE_RATES, _CURRENCY_INFO = init_fx()
 
 def get_fx(country): return _CURRENCY_INFO[country].copy() | {"rate": _CURRENT_RATES[country]}
 
@@ -215,8 +220,6 @@ def compute_boq(d, country):
     total_usd = sum(q * (u * fx["multiplier"]) for _, q, u in items)
     total_local = total_usd * fx["rate"]
     return total_usd, total_local, fx
-
-init_fx()
 
 # ════════════════  FX HISTORY & FOREST  ════════════════
 @st.cache_data(ttl=3600)
