@@ -1,7 +1,6 @@
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
-# streamlit_app.py – Minimal Logo, Region‑Based Soils,
-# Concepts Tab, No Sidebar Clutter
+# streamlit_app.py – Black & Grey Theme, No Logos/Images
 # =========================================================
 
 import streamlit as st
@@ -104,7 +103,7 @@ ARCH_DOMAINS = {
 }
 
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_cat, seed=0):
-    rng = random.Random(seed)                     # fixed: directly use seed (0 is valid)
+    rng = random.Random(seed)
     plot = max(200, plot_size + rng.randint(-300, 300))
     max_fp = int(plot * rng.uniform(0.5, 0.75))
     fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
@@ -116,22 +115,22 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     beams = int(cols * rng.uniform(1.5, 2.2))
 
     rooms = [
-        {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#1e293b"},
-        {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#334155"},
+        {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#3a3a4a"},
+        {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#4a4a5a"},
     ]
     if domain == "Residential":
-        rooms += [{"name": "Grand Living Room", "type": "Living Room", "w": rng.uniform(6, 8), "h": rng.uniform(5, 6), "color": "#0d2040"},
-                  {"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#053020"}]
+        rooms += [{"name": "Grand Living Room", "type": "Living Room", "w": rng.uniform(6, 8), "h": rng.uniform(5, 6), "color": "#2a2a3a"},
+                  {"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#1a2a1a"}]
         for i in range(max(1, int(gfa / rng.randint(60, 90)))):
-            rooms.append({"name": f"Master Suite {i+1}", "type": "Bedroom", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#2a0f4d"})
+            rooms.append({"name": f"Master Suite {i+1}", "type": "Bedroom", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#2a1a3a"})
     elif domain == "Commercial":
-        rooms += [{"name": "Co-Working Hub Suite", "type": "Office Space", "w": rng.uniform(10, 14), "h": rng.uniform(7, 9), "color": "#075e8a"},
-                  {"name": "Executive Dialogue Hall", "type": "Conference", "w": rng.uniform(5, 7), "h": rng.uniform(4, 6), "color": "#1e1b4b"}]
+        rooms += [{"name": "Co-Working Hub Suite", "type": "Office Space", "w": rng.uniform(10, 14), "h": rng.uniform(7, 9), "color": "#1a3a4a"},
+                  {"name": "Executive Dialogue Hall", "type": "Conference", "w": rng.uniform(5, 7), "h": rng.uniform(4, 6), "color": "#2a2a3a"}]
     else:
-        rooms += [{"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#3b0764"},
-                  {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#451a03"}]
+        rooms += [{"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
+                  {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"}]
 
-    for b in range(baths): rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2306"})
+    for b in range(baths): rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
     doors = len(rooms) + floors * rng.randint(1, 3)
     windows = max(4, int(gfa / rng.randint(12, 20)))
     return {
@@ -200,6 +199,9 @@ def init_fx():
 
 def get_fx(country): return _CURRENCY_INFO[country].copy() | {"rate": _CURRENT_RATES[country]}
 
+def get_all_countries():
+    return list(STATIC_FX.keys())
+
 def convert_currency(amount, frm, to):
     if frm == to: return amount
     usd = amount if frm == "USD" else amount / _CURRENT_RATES[frm]
@@ -229,9 +231,9 @@ def fetch_hist(start, end):
 
 def plot_hist(df):
     fig = go.Figure()
-    colors = {"KES":"#38bdf8","UGX":"#facc15","TZS":"#4ade80","SSP":"#fb923c","RWF":"#c084fc","ETB":"#f43f5e"}
+    colors = {"KES":"#888","UGX":"#aaa","TZS":"#666","SSP":"#999","RWF":"#777","ETB":"#555"}
     for c in df.columns: fig.add_trace(go.Scatter(x=df.index, y=df[c], mode='lines', name=c, line=dict(color=colors.get(c,'#94a3b8'))))
-    fig.update_layout(title="East African FX Rates – 60 days", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#94a3b8', margin=dict(l=20,r=20,t=40,b=20))
+    fig.update_layout(title="East African FX Rates – 60 days", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa', margin=dict(l=20,r=20,t=40,b=20))
     return fig
 
 def forest(base, days=7, paths=100, vol=0.008):
@@ -244,9 +246,9 @@ def forest(base, days=7, paths=100, vol=0.008):
         lower = np.percentile(paths, (100-perc)/2, axis=0)
         upper = np.percentile(100 - (100-perc)/2, axis=0)
         fig.add_trace(go.Scatter(x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False))
-        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=f'rgba(99,102,241,{0.1*(3-perc/50)})', line=dict(width=0), name=f'{perc}%'))
-    fig.add_trace(go.Scatter(x=x, y=np.median(paths, axis=0), mode='lines+markers', name='Median', line=dict(color='#a78bfa')))
-    fig.update_layout(title="Weekly Forecast", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#94a3b8', margin=dict(l=20,r=20,t=40,b=20))
+        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=f'rgba(100,100,100,{0.1*(3-perc/50)})', line=dict(width=0), name=f'{perc}%'))
+    fig.add_trace(go.Scatter(x=x, y=np.median(paths, axis=0), mode='lines+markers', name='Median', line=dict(color='#cccccc')))
+    fig.update_layout(title="Weekly Forecast", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa', margin=dict(l=20,r=20,t=40,b=20))
     return fig
 
 # ════════════════  RAM AI  ════════════════
@@ -285,12 +287,12 @@ def render_floorplan(plan, span=6.0):
     fig = go.Figure()
     def add_room(x0, y0, x1, y1, color, name, w_m, d_m):
         w_d, _ = to_display_length(w_m); d_d, _ = to_display_length(d_m)
-        fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor=color, line=dict(color="white", width=2), opacity=0.7)
-        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=f"<b>{name}</b><br>{w_d}×{d_d} {unit}", showarrow=False, font=dict(size=10, color="white"), bgcolor="rgba(0,0,0,0.5)")
+        fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor=color, line=dict(color="#555", width=2), opacity=0.7)
+        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=f"<b>{name}</b><br>{w_d}×{d_d} {unit}", showarrow=False, font=dict(size=10, color="#cccccc"), bgcolor="rgba(0,0,0,0.7)")
     cl, cw = corridor["h"], corridor["w"]
     max_x = cl + 5; max_y = cw + sum(r["h"] for r in others) + 5
-    for x in np.arange(0, max_x + span, span): fig.add_shape(type="line", x0=x, y0=-max_y, x1=x, y1=max_y, line=dict(color="rgba(56,189,248,0.15)", width=1), layer="below")
-    for y in np.arange(-max_y, max_y, span): fig.add_shape(type="line", x0=0, y0=y, x1=max_x, y1=y, line=dict(color="rgba(56,189,248,0.15)", width=1), layer="below")
+    for x in np.arange(0, max_x + span, span): fig.add_shape(type="line", x0=x, y0=-max_y, x1=x, y1=max_y, line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
+    for y in np.arange(-max_y, max_y, span): fig.add_shape(type="line", x0=0, y0=y, x1=max_x, y1=y, line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
     add_room(0, -cw/2, cl, cw/2, corridor["color"], corridor["name"], corridor["w"], corridor["h"])
     cx, side = 1.5, 1
     for room in others:
@@ -300,14 +302,14 @@ def render_floorplan(plan, span=6.0):
         y1 = y0 + rd
         add_room(cx, y0, cx + rw, y1, room["color"], room["name"], rw, rd)
         door_x, door_y = cx + rw/2, cw/2 if side==1 else -cw/2
-        fig.add_shape(type="path", path=f"M {door_x-0.3},{door_y} Q {door_x-0.3},{door_y+(0.6 if side==1 else -0.6)} {door_x+0.3},{door_y+(0.6 if side==1 else -0.6)} Q {door_x+0.3},{door_y} {door_x-0.3},{door_y}", line=dict(color="yellow", width=2), fillcolor="rgba(255,255,0,0.2)")
-        fig.add_annotation(x=(door_x), y=(y0+y1)/2, ax=door_x, ay=door_y, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#facc15")
+        fig.add_shape(type="path", path=f"M {door_x-0.3},{door_y} Q {door_x-0.3},{door_y+(0.6 if side==1 else -0.6)} {door_x+0.3},{door_y+(0.6 if side==1 else -0.6)} Q {door_x+0.3},{door_y} {door_x-0.3},{door_y}", line=dict(color="#888", width=2), fillcolor="rgba(100,100,100,0.2)")
+        fig.add_annotation(x=(door_x), y=(y0+y1)/2, ax=door_x, ay=door_y, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#888")
         cx += rw + 0.8; side *= -1
     if stairs:
         sx = cl + 0.5
         add_room(sx, -cw/2, sx+stairs["w"], cw/2, stairs["color"], stairs["name"], stairs["w"], stairs["h"])
-        fig.add_annotation(x=sx+stairs["w"]/2, y=0, ax=cl-0.5, ay=0, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#facc15")
-    fig.add_annotation(x=0.5, y=0, ax=-1, ay=0, xref="x", yref="y", axref="x", ayref="y", text="<b>ENTRANCE</b>", showarrow=True, arrowhead=3, arrowcolor="#22c55e", font=dict(color="#22c55e"))
+        fig.add_annotation(x=sx+stairs["w"]/2, y=0, ax=cl-0.5, ay=0, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#888")
+    fig.add_annotation(x=0.5, y=0, ax=-1, ay=0, xref="x", yref="y", axref="x", ayref="y", text="<b>ENTRANCE</b>", showarrow=True, arrowhead=3, arrowcolor="#888", font=dict(color="#888"))
     fig.update_layout(title="🗺️ 2D Floor Plan", xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x", scaleratio=1),
                       plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20,r=20,t=40,b=20), showlegend=False, width=800, height=500)
     return fig
@@ -321,9 +323,9 @@ def render_3d(plan, floors=1, span=6.0):
         min_y = min(min_y, yc - r["h"]/2); max_y = max(max_y, yc + r["h"]/2)
     gs = span*2
     for x in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
-        traces.append(go.Scatter3d(x=[x,x], y=[min_y, max_y], z=[0,0], mode='lines', line=dict(color='#1e293b', width=1), showlegend=False))
+        traces.append(go.Scatter3d(x=[x,x], y=[min_y, max_y], z=[0,0], mode='lines', line=dict(color='#333', width=1), showlegend=False))
     for y in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
-        traces.append(go.Scatter3d(x=[min_x, max_x], y=[y,y], z=[0,0], mode='lines', line=dict(color='#1e293b', width=1), showlegend=False))
+        traces.append(go.Scatter3d(x=[min_x, max_x], y=[y,y], z=[0,0], mode='lines', line=dict(color='#333', width=1), showlegend=False))
     for i, r in enumerate(plan):
         xc = (i%3)*12; yc = (i//3)*10
         w, d, c = r["w"], r["h"], r["color"]
@@ -336,21 +338,21 @@ def render_3d(plan, floors=1, span=6.0):
                 traces.append(go.Scatter3d(x=[cx,cx], y=[cy,cy], z=[zb,zt], mode='lines', line=dict(color=c, width=2), showlegend=False))
     for gx in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
         for gy in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
-            traces.append(go.Scatter3d(x=[gx,gx], y=[gy,gy], z=[0, floors*3], mode='lines', line=dict(color='#c084fc', width=2, dash='dot'), showlegend=False))
+            traces.append(go.Scatter3d(x=[gx,gx], y=[gy,gy], z=[0, floors*3], mode='lines', line=dict(color='#555', width=2, dash='dot'), showlegend=False))
     fig = go.Figure(data=traces)
-    fig.update_layout(scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False), bgcolor='#040711'),
-                      paper_bgcolor='#040711', margin=dict(l=0,r=0,b=0,t=20), showlegend=False, title="3D Massing", title_font=dict(color='#94a3b8', size=14))
+    fig.update_layout(scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False), bgcolor='#0a0a0a'),
+                      paper_bgcolor='#0a0a0a', margin=dict(l=0,r=0,b=0,t=20), showlegend=False, title="3D Massing", title_font=dict(color='#aaaaaa', size=14))
     return fig
 
 def render_isometric(plan, span=6.0):
     w_, h_ = 800, 380; unit = "ft" if st.session_state.get("unit_system")=="imperial" else "m"
-    js = f"ctx.strokeStyle='rgba(56,189,248,0.1)';ctx.lineWidth=1;const step={span*2};for(let x=0;x<{w_};x+=step){{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,{h_});ctx.stroke();}}for(let y=0;y<{h_};y+=step){{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo({w_},y);ctx.stroke();}}"
+    js = f"ctx.strokeStyle='rgba(100,100,100,0.1)';ctx.lineWidth=1;const step={span*2};for(let x=0;x<{w_};x+=step){{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,{h_});ctx.stroke();}}for(let y=0;y<{h_};y+=step){{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo({w_},y);ctx.stroke();}}"
     for i, r in enumerate(plan):
         ox = (i%3)*170+100; oy = (i//3)*110+130
         rw = min(115, int(r["w"]*14)); rh = min(95, int(r["h"]*14)); c = r["color"]
         wd, _ = to_display_length(r["w"]); hd, _ = to_display_length(r["h"])
-        js += f"ctx.fillStyle='{c}';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox+rw},{oy-rh/2});ctx.lineTo({ox+rw+rw},{oy});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.06)';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox},{oy-40});ctx.lineTo({ox+rw},{oy+rh/2-40});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 11px Space Grotesk';ctx.fillText('{r["name"]} ({wd}×{hd} {unit})',{ox+15},{oy-2});"
-    return f"<canvas width='{w_}' height='{h_}' style='max-width:100%;background:#050814;'></canvas><script>const c=document.querySelector('canvas');const ctx=c.getContext('2d');{js}</script>"
+        js += f"ctx.fillStyle='{c}';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox+rw},{oy-rh/2});ctx.lineTo({ox+rw+rw},{oy});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(200,200,200,0.3)';ctx.stroke();ctx.fillStyle='rgba(200,200,200,0.06)';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox},{oy-40});ctx.lineTo({ox+rw},{oy+rh/2-40});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#ccc';ctx.font='bold 11px Space Grotesk';ctx.fillText('{r["name"]} ({wd}×{hd} {unit})',{ox+15},{oy-2});"
+    return f"<canvas width='{w_}' height='{h_}' style='max-width:100%;background:#0a0a0a;'></canvas><script>const c=document.querySelector('canvas');const ctx=c.getContext('2d');{js}</script>"
 
 def boq_table(asset):
     gfa = asset["total_gfa"]; fx = asset["fx"]; sm = SOIL_MULTIPLIERS.get(asset.get("soil_category","medium"), 1.0)
@@ -374,7 +376,7 @@ def gantt_chart(asset):
     df["Start"] = ends[:-1]; df["Finish"] = ends[1:]
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", title="📅 Gantt Chart")
     fig.update_yaxes(autorange="reversed")
-    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#94a3b8'))
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#aaaaaa'))
     return fig
 
 # ════════════════  UI  ════════════════
@@ -382,19 +384,19 @@ st.set_page_config(page_title="Arc – Sai Engine", page_icon="◈", layout="wid
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html,body,.stApp{background:#0a0a14;color:#e2e8f0;font-family:'Inter',sans-serif}
-.glass-panel{background:rgba(255,255,255,0.04);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:20px}
-.stButton>button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:600;padding:8px 20px;transition:all .2s;box-shadow:0 4px 12px rgba(99,102,241,0.4)}
-.stButton>button:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(139,92,246,0.6)}
-[data-testid="stSidebar"]{background:rgba(10,10,25,0.9);backdrop-filter:blur(16px)}
-.stTextInput>div>div>input,.stNumberInput input,.stSelectbox>div>div,.stTextArea textarea{background:transparent!important;border:1px solid rgba(255,255,255,0.15)!important;border-radius:8px;color:#e2e8f0!important}
-.metric-bar-bg{background:rgba(30,41,59,0.8);border-radius:5px;height:6px}
-.metric-bar-fg{border-radius:5px;background:linear-gradient(90deg,#6366f1,#38bdf8)}
+html,body,.stApp{background:#0a0a0a;color:#cccccc;font-family:'Inter',sans-serif}
+.glass-panel{background:#111111;border:1px solid #333333;border-radius:18px;padding:20px}
+.stButton>button{background:#333333;color:#ffffff;border:none;border-radius:10px;font-weight:600;padding:8px 20px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.stButton>button:hover{background:#444444;box-shadow:0 4px 12px rgba(0,0,0,0.8)}
+[data-testid="stSidebar"]{background:#0a0a0a;border-right:1px solid #222}
+.stTextInput>div>div>input,.stNumberInput input,.stSelectbox>div>div,.stTextArea textarea{background:transparent!important;border:1px solid #333!important;border-radius:8px;color:#cccccc!important}
+.metric-bar-bg{background:#222;border-radius:5px;height:6px}
+.metric-bar-fg{border-radius:5px;background:#888;height:6px}
+.stMetric .stMetricLabel{color:#aaaaaa!important}
+.stMetric .stMetricValue{color:#cccccc!important}
+div[data-testid="stMetricDelta"]{color:#aaaaaa!important}
 </style>
 """, unsafe_allow_html=True)
-
-# Main diamond logo (used in login and sidebar)
-LOGO_SVG = """<div style="text-align:center; padding:10px 0"><svg width="36" height="36" viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12L12 2Z" stroke="url(#g)" stroke-width="2" fill="none"/><path d="M12 2L22 12L12 22L2 12L12 2Z" fill="url(#g)" fill-opacity="0.15"/><defs><linearGradient id="g" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs></svg></div>"""
 
 # Session init
 if "logged_in" not in st.session_state:
@@ -405,11 +407,11 @@ if "logged_in" not in st.session_state:
 
 if not load_users(): create_user("admin", "admin123")
 
-# ════════════════  LOGIN – Main logo shown  ════════════════
+# ════════════════  LOGIN – No logo  ════════════════
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.markdown(LOGO_SVG, unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center;font-size:2rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
         with st.form("auth"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
@@ -434,10 +436,10 @@ if not st.session_state.logged_in:
 username = st.session_state.username; user = st.session_state.user_data; mem = st.session_state.memory
 
 with st.sidebar:
-    st.markdown(LOGO_SVG, unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:#a5b4fc'>{username} · Lvl {user['level']}</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;font-size:1.4rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:#888;'>{username} · Lvl {user['level']}</div>", unsafe_allow_html=True)
     lvl, xp = user["level"], user["xp"]; needed = xp_for_level(lvl); prog = xp/needed if needed else 1
-    st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:10px 0'><span style='font-size:10px;color:#a78bfa'>LVL {lvl}</span><div style='flex:1;height:5px;background:#1e293b;border-radius:2px'><div style='width:{prog*100}%;height:100%;background:linear-gradient(90deg,#6366f1,#38bdf8);border-radius:2px'></div></div><span style='font-size:9px;color:#94a3b8'>{xp}/{needed} XP</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:10px 0'><span style='font-size:10px;color:#888;'>LVL {lvl}</span><div style='flex:1;height:5px;background:#222;border-radius:2px'><div style='width:{prog*100}%;height:100%;background:#888;border-radius:2px'></div></div><span style='font-size:9px;color:#666;'>{xp}/{needed} XP</span></div>", unsafe_allow_html=True)
     unit = st.selectbox("📏 Unit System", ["Metric (m, m²)", "Imperial (ft, sq ft)"])
     st.session_state.unit_system = "metric" if "Metric" in unit else "imperial"
     nav = st.radio("Navigate", ["Dashboard", "Concepts", "Ram AI"])
@@ -452,7 +454,6 @@ with st.sidebar:
         if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
-        # Soil – region‑specific (Nairobi, Kampala, Juba etc.)
         desc, def_cat = REGION_SOIL_MAP.get(country, ("Unknown", "medium"))
         cat_opts = ["soft", "medium", "rock"]
         labels = {"soft":"Soft Clay/Silt", "medium":"Medium Sand/Gravel", "rock":"Rock/Laterite"}
@@ -508,15 +509,15 @@ with st.sidebar:
 
 # ════════════════  MAIN AREA  ════════════════
 if nav == "Dashboard":
-    st.markdown("<div class='glass-panel' style='text-align:center;margin-bottom:24px;'><h2 style='margin:0;color:#6366f1;'>Welcome back, Architect 👋</h2><p style='color:#a5b4fc;'>Create. Evolve. Perfect.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='glass-panel' style='text-align:center;margin-bottom:24px;'><h2 style='margin:0;color:#aaaaaa;'>Welcome back, Architect 👋</h2><p style='color:#888;'>Create. Evolve. Perfect.</p></div>", unsafe_allow_html=True)
     st.markdown("### 💹 Live East African FX Rates")
     cols = st.columns(6)
     for i, c in enumerate(get_all_countries()):
         data = get_fx(c); rate = data["rate"]; base = _BASELINE_RATES[c]
         change = ((rate - base) / base) * 100
-        color = "#22c55e" if change>=0 else "#ef4444"
+        color = "#888" if change>=0 else "#555"
         with cols[i]:
-            st.markdown(f"<div class='glass-panel' style='padding:12px 4px;text-align:center;'><div style='font-size:0.75rem;color:#94a3b8;'>{c}</div><div style='font-size:1.3rem;font-weight:600;'>{data['symbol']} {rate:.2f}</div><div style='font-size:0.7rem;color:{color};'>{'+' if change>=0 else ''}{change:.2f}%</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='glass-panel' style='padding:12px 4px;text-align:center;'><div style='font-size:0.75rem;color:#888;'>{c}</div><div style='font-size:1.3rem;font-weight:600;color:#ccc;'>{data['symbol']} {rate:.2f}</div><div style='font-size:0.7rem;color:{color};'>{'+' if change>=0 else ''}{change:.2f}%</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     with st.expander("📈 East African FX History (60 days)", expanded=True):
         end_date = datetime.today(); start_date = end_date - timedelta(days=60)
@@ -551,7 +552,7 @@ elif nav == "Concepts":
         st.markdown("## 🔬 Evolution Engine Results")
         st.caption("5 unique design concepts evaluated by Sai AI Agents")
         names = ["Alpha","Beta","Gamma","Delta","Epsilon"]
-        colors = ["#4ade80","#eab308","#3b82f6","#8b5cf6","#ec4899"]
+        colors = ["#888","#999","#777","#666","#555"]
         tabs = st.tabs(names[:len(concepts)])
         for idx, (tab, c) in enumerate(zip(tabs, concepts)):
             with tab:
@@ -564,8 +565,8 @@ elif nav == "Concepts":
                     st.caption(f"Floor Area: {c['floor_area']} m² | {c['floors']} floors | {c['country']}")
                     with st.expander("🧱 Material Breakdown"): st.dataframe(boq_table(c), use_container_width=True)
                 with col2:
-                    for lbl, key, col in [("🏛️ Architect AI","arch","#4ade80"),("⚙️ Structural AI","struct","#00d2ff"),("🌱 Sustainability AI","sust","#38bdf8"),("💰 Cost AI","cost","#facc15")]:
-                        st.markdown(f"<div style='margin-bottom:6px;'><div style='display:flex;align-items:center;font-size:12px;color:#94a3b8'>{lbl} {sc[key]}%</div><div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div></div>", unsafe_allow_html=True)
+                    for lbl, key, col in [("🏛️ Architect AI","arch","#888"),("⚙️ Structural AI","struct","#aaa"),("🌱 Sustainability AI","sust","#777"),("💰 Cost AI","cost","#999")]:
+                        st.markdown(f"<div style='margin-bottom:6px;'><div style='display:flex;align-items:center;font-size:12px;color:#888'>{lbl} {sc[key]}%</div><div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div></div>", unsafe_allow_html=True)
                     st.metric("USD Total", f"${c['total_usd']:,.0f}")
                     st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
                     st.markdown("### 📦 3D Massing")
@@ -577,7 +578,7 @@ elif nav == "Concepts":
             cats = list(radar_df.columns[1:])
             fig_radar = go.Figure()
             for i, row in radar_df.iterrows(): fig_radar.add_trace(go.Scatterpolar(r=row[cats].values, theta=cats, fill='toself', name=row["Concept"], line_color=colors[i]))
-            fig_radar.update_layout(polar=dict(radialaxis=dict(range=[0,100])), paper_bgcolor='rgba(0,0,0,0)', font_color='#94a3b8')
+            fig_radar.update_layout(polar=dict(radialaxis=dict(range=[0,100])), paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa')
             st.plotly_chart(fig_radar, use_container_width=True)
         asset = concepts[0]
         st.markdown("---"); st.markdown("### 🏆 TOP RECOMMENDATION: CONCEPT ALPHA")
@@ -606,4 +607,4 @@ elif nav == "Ram AI":
         if speaker == "You": st.markdown(f"**👤 {speaker}:** {msg}")
         else: st.markdown(f'**🧠 {speaker}:** {msg}')
 
-st.markdown("<div style='text-align:center;padding:20px 0;color:#4b5563'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center;padding:20px 0;color:#444'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
