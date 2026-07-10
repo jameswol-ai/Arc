@@ -530,11 +530,19 @@ if nav == "Dashboard":
         else:
             st.info("Live data unavailable – showing simulated trends.")
             base_rates = {c: _CURRENT_RATES[c] for c in get_all_countries()}
-            sim = {}; dates = [start_date + timedelta(days=i) for i in range(61)]
+            sim = {}
+            # Generate 61 dates (from start to end, 60 days after start = 61 dates)
+            dates = [start_date + timedelta(days=i) for i in range(61)]
             for c, r in base_rates.items():
-                rng = np.random.default_rng(42); steps = rng.normal(0,0.005,len(dates))
-                vals = [r]; [vals.append(vals[-1]*(1+s)) for s in steps]
+                rng = np.random.default_rng(42)
+                # One fewer step than dates, because we start from the first date's rate
+                steps = rng.normal(0, 0.005, len(dates) - 1)
+                vals = [r]
+                for s in steps:
+                    vals.append(vals[-1] * (1 + s))
+                # drop the initial rate, keeping the 60 subsequent values
                 sim[c] = vals[1:]
+            # Use dates[1:] (60 entries) to align with the 60 simulated values
             df_sim = pd.DataFrame(sim, index=dates[1:])
             st.plotly_chart(plot_hist(df_sim), use_container_width=True)
     st.markdown("---")
