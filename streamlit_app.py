@@ -1,6 +1,7 @@
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
-# streamlit_app.py – Minimal Logo, Concepts Tab, Transparent Inputs
+# streamlit_app.py – Minimal Logo, Region‑Based Soils,
+# Concepts Tab, No Sidebar Clutter
 # =========================================================
 
 import streamlit as st
@@ -11,7 +12,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import numpy as np, pandas as pd
 
-# ════════════════════  UNIT CONVERSION  ════════════════
+# ════════════════  UNIT CONVERSION  ════════════════
 M2_TO_FT2, M_TO_FT = 10.7639, 3.28084
 
 def to_display_length(m):
@@ -392,7 +393,7 @@ html,body,.stApp{background:#0a0a14;color:#e2e8f0;font-family:'Inter',sans-serif
 </style>
 """, unsafe_allow_html=True)
 
-# Single minimal diamond logo (displayed in sidebar header)
+# Main diamond logo (used in login and sidebar)
 LOGO_SVG = """<div style="text-align:center; padding:10px 0"><svg width="36" height="36" viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12L12 2Z" stroke="url(#g)" stroke-width="2" fill="none"/><path d="M12 2L22 12L12 22L2 12L12 2Z" fill="url(#g)" fill-opacity="0.15"/><defs><linearGradient id="g" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs></svg></div>"""
 
 # Session init
@@ -404,11 +405,11 @@ if "logged_in" not in st.session_state:
 
 if not load_users(): create_user("admin", "admin123")
 
-# ════════════════  LOGIN (no welcome/logo)  ════════════════
+# ════════════════  LOGIN – Main logo shown  ════════════════
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.markdown("<div style='margin-top:80px;'></div>", unsafe_allow_html=True)
+        st.markdown(LOGO_SVG, unsafe_allow_html=True)
         with st.form("auth"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
@@ -429,7 +430,7 @@ if not st.session_state.logged_in:
                     except ValueError as e: st.error(str(e))
     st.stop()
 
-# ════════════════  SIDEBAR  ════════════════
+# ════════════════  SIDEBAR – No prompt, no project memory  ════════════════
 username = st.session_state.username; user = st.session_state.user_data; mem = st.session_state.memory
 
 with st.sidebar:
@@ -468,7 +469,6 @@ with st.sidebar:
         weights = (w_arch, w_struct, w_sust, w_cost)
         st.caption(f"Norm: arch {w_arch:.2f} struct {w_struct:.2f} sust {w_sust:.2f} cost {w_cost:.2f}")
 
-    prompt = st.text_area("💡 Prompt (optional)", placeholder="e.g. sustainable beach house...", height=68)
     if st.button("✨ Generate Concepts", use_container_width=True):
         with st.spinner("Synthesizing 5 concepts..."):
             concepts = []
@@ -480,7 +480,7 @@ with st.sidebar:
                 ec = run_eurocode_analysis(d, domain)
                 d["eurocode"] = ec
                 total_usd, total_local, fx = compute_boq(d, country)
-                arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, prompt, weights)
+                arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "", weights)
                 d["scores"] = {"arch":arch,"struct":struct,"sust":sust,"cost":cost,"composite":comp}
                 d["total_usd"], d["total_local"], d["fx"] = total_usd, total_local, fx
                 concepts.append(d)
@@ -489,7 +489,7 @@ with st.sidebar:
             st.session_state.active_design = concepts[0]
             log_event(username, mem, f"Generated 5 concepts. Alpha: {concepts[0]['id']}")
             leveled_up = add_xp(username, 20)
-            st.session_state.user_data = get_user(username)  # refresh XP
+            st.session_state.user_data = get_user(username)
             if leveled_up: st.balloons()
             st.rerun()
 
@@ -504,12 +504,6 @@ with st.sidebar:
         sym_to = "$" if to_cur=="USD" else get_fx(to_cur)["symbol"]
         st.metric(f"{sym_from} {amount:,.2f}", f"{sym_to} {res:,.2f}")
 
-    st.markdown("---")
-    st.markdown("📂 Project Memory")
-    if mem["designs"]:
-        for d in mem["designs"][-5:]:
-            st.markdown(f"<div style='background:rgba(255,255,255,0.04);border-radius:8px;padding:6px;margin:4px 0;font-size:0.8rem;'>🏗️ #{d['id']} - {d['type']}</div>", unsafe_allow_html=True)
-    else: st.caption("No designs yet")
     if st.button("🚪 Logout", use_container_width=True): save_memory(username, mem); st.session_state.logged_in = False; st.rerun()
 
 # ════════════════  MAIN AREA  ════════════════
