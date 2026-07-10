@@ -1,7 +1,6 @@
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
-# streamlit_app.py – Modern UI, Logo, Forex Forest, % Change
-# Region‑Specific Soils, Ram AI, Sai Engine
+# streamlit_app.py – Minimal Logo, Concepts Tab, Transparent Inputs
 # =========================================================
 
 import streamlit as st
@@ -19,186 +18,20 @@ import numpy as np
 import pandas as pd
 
 # ═══════════════════════════════════════════════════════
-# 0. TRANSLATIONS (English / Kiswahili)
+# 0. UNIT CONVERSION (English only)
 # ═══════════════════════════════════════════════════════
 M2_TO_FT2 = 10.7639
 M_TO_FT = 3.28084
 
 def to_display_length(m):
     if st.session_state.get("unit_system") == "imperial":
-        return round(m * M_TO_FT, 1), t("ft")
-    return round(m, 1), t("m")
+        return round(m * M_TO_FT, 1), "ft"
+    return round(m, 1), "m"
 
 def to_display_area(m2):
     if st.session_state.get("unit_system") == "imperial":
-        return round(m2 * M2_TO_FT2, 1), t("sqft")
-    return round(m2, 1), t("m²")
-
-TRANSLATIONS = {
-    "en": {
-        "sidebar_title": "Arc",
-        "sidebar_subtitle": "Sai Engine & FX Studio",
-        "studio_workspace": "Navigate",
-        "dashboard": "Dashboard",
-        "results": "Results",
-        "ram_ai_tab": "Ram AI",
-        "arc_config": "📐 Arc Configuration",
-        "select_country": "Target Region",
-        "select_domain": "Domain",
-        "select_type": "Typology",
-        "plot_area": "Plot Area (m²)",
-        "floors": "Floors",
-        "bathrooms": "Bathrooms",
-        "soil_type": "🌱 Soil Condition",
-        "soil_soft": "Soft Clay / Silt",
-        "soil_medium": "Medium Sand / Gravel",
-        "soil_rock": "Rock / Laterite",
-        "ai_weights": "⚖️ AI Weights",
-        "arch_weight": "Architecture",
-        "struct_weight": "Structural",
-        "sust_weight": "Sustainability",
-        "cost_weight": "Cost",
-        "forex_converter": "💱 Forex Converter",
-        "from": "From",
-        "to": "To",
-        "amount": "Amount",
-        "project_memory": "📂 Project Memory",
-        "no_designs": "No designs yet...",
-        "welcome": "Welcome back, Architect 👋",
-        "tagline": "Create. Evolve. Perfect.",
-        "live_fx": "💹 Live East African FX Rates",
-        "kes_history": "📈 East African FX History (60 days)",
-        "forex_forest": "🌳 Forex Forest – Weekly Forecast",
-        "forex_forest_desc": "Monte Carlo simulation of possible rate paths over the next 7 days",
-        "simulated": "Simulated",
-        "total_blueprints": "Blueprints",
-        "arch_concepts": "Concepts",
-        "pipeline_logs": "Logs",
-        "generate_btn": "✨ Generate Concepts",
-        "awaiting_input": "No designs yet. Configure parameters in sidebar and click **Generate Concepts**.",
-        "ram_placeholder": "Ask Ram about soil, foundations, costs...",
-        "ram_ask_btn": "Ask Ram AI",
-        "ram_ai_desc": "Infinite Architectural Intelligence",
-        "m": "m",
-        "ft": "ft",
-        "m²": "m²",
-        "sqft": "sq ft",
-        "unit_system": "📏 Unit System",
-        "metric": "Metric (m, m²)",
-        "imperial": "Imperial (ft, sq ft)",
-        "plot_area_caption": "= {area_ft} sq ft",
-        "refresh_fx": "🔄 Refresh Live Rates",
-        "conversion_caption": "1 {from_curr} = {rate} {to_curr}",
-        "2d_floor_plan": "🗺️ 2D Floor Plan",
-        "3d_massing": "📦 3D Massing Concept",
-        "material_breakdown": "🧱 Material Breakdown",
-        "gantt_expander": "📅 Construction Gantt Chart",
-        "radar_title": "📊 AI Score Radar Comparison",
-        "top_recommendation": "🏆 TOP RECOMMENDATION: CONCEPT ALPHA",
-        "save_library": "💾 Save to Library",
-        "saved_success": "Design saved!",
-        "export_csv": "📥 Export All Concepts as CSV",
-        "download_report": "📄 Download Design Report",
-        "description_prefix": "Design brief:",
-        "arch_ai": "🏛️ Architect AI",
-        "struct_ai": "⚙️ Structural AI",
-        "sust_ai": "🌱 Sustainability AI",
-        "cost_ai": "💰 Cost AI",
-        "usd_total": "USD Total",
-        "local_currency": "Local",
-        "view_mode_3d": "3D View Mode",
-        "isometric": "Isometric Wireframe",
-        "interactive_3d": "Interactive 3D Rooms",
-        "gfa_line": "Total GFA: {gfa_m} m² ({gfa_ft} sq ft)",
-        "floor_area_line": "Floor Area: {fa_m} m² ({fa_ft} sq ft)",
-        "grid_label": "Grid: {span_m} m × {span_m} m",
-    },
-    "sw": {
-        "sidebar_title": "Arc",
-        "sidebar_subtitle": "Injini ya Sai & FX Studio",
-        "studio_workspace": "Safiri",
-        "dashboard": "Dashibodi",
-        "results": "Matokeo",
-        "ram_ai_tab": "Ram AI",
-        "arc_config": "📐 Mipangilio ya Arc",
-        "select_country": "Eneo Lengwa",
-        "select_domain": "Kikoa",
-        "select_type": "Aina",
-        "plot_area": "Eneo la Kiwanja (m²)",
-        "floors": "Sakafu",
-        "bathrooms": "Vyoo",
-        "soil_type": "🌱 Hali ya Udongo",
-        "soil_soft": "Udongo Laini / Tope",
-        "soil_medium": "Mchanga wa Kati / Changarawe",
-        "soil_rock": "Mwamba / Laterite",
-        "ai_weights": "⚖️ Vipimo vya AI",
-        "arch_weight": "Usanifu",
-        "struct_weight": "Muundo",
-        "sust_weight": "Uendelevu",
-        "cost_weight": "Gharama",
-        "forex_converter": "💱 Kigeuzi cha Fedha",
-        "from": "Kutoka",
-        "to": "Kwenda",
-        "amount": "Kiasi",
-        "project_memory": "📂 Kumbukumbu",
-        "no_designs": "Hakuna miundo bado...",
-        "welcome": "Karibu tena, Mbunifu 👋",
-        "tagline": "Unda. Boresha. Kamilisha.",
-        "live_fx": "💹 Viwango vya Fedha vya Afrika Mashariki",
-        "kes_history": "📈 Historia ya FX Afrika Mashariki (siku 60)",
-        "forex_forest": "🌳 Msitu wa Fedha – Utabiri wa Wiki",
-        "forex_forest_desc": "Simulizi ya Monte Carlo ya njia za kiwango kwa siku 7 zijazo",
-        "simulated": "Imeigwa",
-        "total_blueprints": "Ramani",
-        "arch_concepts": "Dhana",
-        "pipeline_logs": "Kumbukumbu",
-        "generate_btn": "✨ Zalisha Dhana",
-        "awaiting_input": "Bado. Weka vigezo kwenye upau wa pembeni na ubofye **'Zalisha Dhana'**.",
-        "ram_placeholder": "Uliza Ram kuhusu udongo, misingi, gharama...",
-        "ram_ask_btn": "Uliza Ram AI",
-        "ram_ai_desc": "Akili Isiyo na Kikomo ya Usanifu",
-        "m": "m",
-        "ft": "ft",
-        "m²": "m²",
-        "sqft": "sq ft",
-        "unit_system": "📏 Mfumo wa Vipimo",
-        "metric": "Metric (m, m²)",
-        "imperial": "Imperial (ft, sq ft)",
-        "plot_area_caption": "= {area_ft} sq ft",
-        "refresh_fx": "🔄 Sasisha Viwango vya Moja kwa Moja",
-        "conversion_caption": "1 {from_curr} = {rate} {to_curr}",
-        "2d_floor_plan": "🗺️ Mpango wa Sakafu 2D",
-        "3d_massing": "📦 Dhana ya Misa 3D",
-        "material_breakdown": "🧱 Uchambuzi wa Vifaa",
-        "gantt_expander": "📅 Chati ya Gantt ya Ujenzi",
-        "radar_title": "📊 Ulinganisho wa Alama za AI",
-        "top_recommendation": "🏆 PENDEREZO KUU: DHANA ALPHA",
-        "save_library": "💾 Hifadhi",
-        "saved_success": "Muundo umehifadhiwa!",
-        "export_csv": "📥 Hamisha Dhana Zote kama CSV",
-        "download_report": "📄 Pakua Ripoti",
-        "description_prefix": "Muhtasari:",
-        "arch_ai": "🏛️ AI ya Usanifu",
-        "struct_ai": "⚙️ AI ya Muundo",
-        "sust_ai": "🌱 AI ya Uendelevu",
-        "cost_ai": "💰 AI ya Gharama",
-        "usd_total": "Jumla USD",
-        "local_currency": "Kwa Sarafu ya Ndani",
-        "view_mode_3d": "Njia ya Kuangalia 3D",
-        "isometric": "Waya Isometriki",
-        "interactive_3d": "Vyumba vya 3D vya Kuingiliana",
-        "gfa_line": "Jumla ya GFA: {gfa_m} m² ({gfa_ft} sq ft)",
-        "floor_area_line": "Eneo la Sakafu: {fa_m} m² ({fa_ft} sq ft)",
-        "grid_label": "Gridi: {span_m} m × {span_m} m",
-    }
-}
-
-def t(key, **kwargs):
-    lang = st.session_state.get("lang", "en")
-    text = TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
-    if kwargs:
-        text = text.format(**kwargs)
-    return text
+        return round(m2 * M2_TO_FT2, 1), "sq ft"
+    return round(m2, 1), "m²"
 
 # ═══════════════════════════════════════════════════════
 # 1. AUTH & USER MANAGEMENT
@@ -310,7 +143,7 @@ def log_event(username: str, memory: dict, msg: str):
     save_memory(username, memory)
 
 # ═══════════════════════════════════════════════════════
-# 3. REGION‑SPECIFIC SOIL DEFINITIONS
+# 3. REGION‑SPECIFIC SOIL DEFINITIONS (East Africa)
 # ═══════════════════════════════════════════════════════
 REGION_SOIL_MAP = {
     "Kenya":       ("Nairobi Red Coffee Clay / Volcanic Loam", "medium"),
@@ -466,7 +299,7 @@ _BASE_FX_DATA = {
 }
 
 _CURRENT_RATES = {}
-_BASELINE_RATES = {}  # yesterday's close for % change
+_BASELINE_RATES = {}
 _CURRENCY_INFO = {}
 
 def _fetch_live_rates():
@@ -491,7 +324,6 @@ def initialize_fx_rates():
     for country, info in _BASE_FX_DATA.items():
         rate = live.get(country, STATIC_FX_RATES.get(country, 1.0)) if live else STATIC_FX_RATES.get(country, 1.0)
         _CURRENT_RATES[country] = rate
-        # simulated baseline: slightly different from current to show % change
         _BASELINE_RATES[country] = rate * random.uniform(0.995, 1.005)
         _CURRENCY_INFO[country] = {
             "currency": info["currency"],
@@ -604,7 +436,7 @@ def generate_forex_forest(base_rate, days=7, paths=100, volatility=0.008):
         path = [base_rate]
         for s in steps:
             path.append(path[-1] * (1 + s))
-        all_paths.append(path[1:])  # exclude initial
+        all_paths.append(path[1:])
     return np.array(all_paths)
 
 def plot_forex_forest(country, base_rate, currency, days=7):
@@ -614,14 +446,10 @@ def plot_forex_forest(country, base_rate, currency, days=7):
     for perc in [95, 80, 50]:
         lower = np.percentile(paths, (100-perc)/2, axis=0)
         upper = np.percentile(100 - (100-perc)/2, axis=0)
-        fig.add_trace(go.Scatter(
-            x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False
-        ))
-        fig.add_trace(go.Scatter(
-            x=x, y=lower, mode='lines', fill='tonexty',
-            fillcolor=f'rgba(99,102,241,{0.1*(3-perc/50)})',
-            line=dict(width=0), name=f'{perc}% confidence'
-        ))
+        fig.add_trace(go.Scatter(x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False))
+        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty',
+                                 fillcolor=f'rgba(99,102,241,{0.1*(3-perc/50)})',
+                                 line=dict(width=0), name=f'{perc}% confidence'))
     median = np.median(paths, axis=0)
     fig.add_trace(go.Scatter(x=x, y=median, mode='lines+markers', name='Median', line=dict(color='#a78bfa')))
     fig.update_layout(
@@ -637,7 +465,7 @@ def plot_forex_forest(country, base_rate, currency, days=7):
     return fig
 
 # ═══════════════════════════════════════════════════════
-# 8. RAM AI
+# 8. RAM AI (unchanged)
 # ═══════════════════════════════════════════════════════
 RAM_WISDOM = {
     "soil": [
@@ -690,7 +518,7 @@ def ram_ai_response(question, country, domain):
     return f"**Ram AI Insight:** {base}\n\n📌 *{country} context:* {extra}"
 
 # ═══════════════════════════════════════════════════════
-# 9. RENDERERS (2D, 3D, BOQ, Gantt)
+# 9. RENDERERS (2D, 3D, BOQ, Gantt) – unchanged
 # ═══════════════════════════════════════════════════════
 def render_floorplan_diagram(plan, span=6.0):
     corridor = None; stairs = None; other_rooms = []
@@ -702,7 +530,7 @@ def render_floorplan_diagram(plan, span=6.0):
 
     corridor_len = corridor["h"]; corridor_wid = corridor["w"]
     fig = go.Figure()
-    unit_len = t("m") if st.session_state.get("unit_system") != "imperial" else t("ft")
+    unit_len = "ft" if st.session_state.get("unit_system") == "imperial" else "m"
     span_m = span
 
     def add_room(x0, y0, x1, y1, color, name, w_m, d_m):
@@ -733,8 +561,7 @@ def render_floorplan_diagram(plan, span=6.0):
         else: y0 = -corridor_wid/2 - 0.5 - rd; y1 = y0 + rd
         add_room(current_x, y0, current_x + rw, y1, room["color"], room["name"], rw, rd)
 
-        door_x = current_x + rw/2
-        door_y = corridor_wid/2 if side == 1 else -corridor_wid/2
+        door_x = current_x + rw/2; door_y = corridor_wid/2 if side==1 else -corridor_wid/2
         fig.add_shape(type="path",
                       path=f"M {door_x-0.3},{door_y} Q {door_x-0.3},{door_y+(0.6 if side==1 else -0.6)} {door_x+0.3},{door_y+(0.6 if side==1 else -0.6)} Q {door_x+0.3},{door_y} {door_x-0.3},{door_y}",
                       line=dict(color="yellow", width=2), fillcolor="rgba(255,255,0,0.2)")
@@ -757,13 +584,13 @@ def render_floorplan_diagram(plan, span=6.0):
                        text="<b>ENTRANCE</b>", showarrow=True,
                        arrowhead=3, arrowcolor="#22c55e", font=dict(color="#22c55e"))
     fig.update_layout(
-        title=t("2d_floor_plan"),
+        title="🗺️ 2D Floor Plan",
         xaxis=dict(visible=False, showgrid=False, zeroline=False),
         yaxis=dict(visible=False, showgrid=False, zeroline=False, scaleanchor="x", scaleratio=1),
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=20, r=20, t=40, b=20), showlegend=False, width=800, height=500
     )
-    fig.add_annotation(x=max_x-1, y=-max_y+1, text=t("grid_label", span_m=span_m),
+    fig.add_annotation(x=max_x-1, y=-max_y+1, text=f"Grid: {span_m} m × {span_m} m",
                        showarrow=False, font=dict(size=10, color="#38bdf8"), opacity=0.7)
     return fig
 
@@ -813,7 +640,7 @@ def render_plotly_3d_rooms(plan, floors=1, floor_height=3.0, span=6.0):
 
 def render_isometric_html(plan, span=6.0):
     canvas_w, canvas_h = 800, 380
-    unit_len = t("m") if st.session_state.get("unit_system") != "imperial" else t("ft")
+    unit_len = "ft" if st.session_state.get("unit_system") == "imperial" else "m"
     shapes_js = f"ctx.strokeStyle='rgba(56,189,248,0.1)';ctx.lineWidth=1;const step={span*2};for(let x=0;x<canvas_w;x+=step){{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas_h);ctx.stroke();}}for(let y=0;y<canvas_h;y+=step){{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas_w,y);ctx.stroke();}}"
     for idx, r in enumerate(plan):
         offset_x = (idx % 3) * 170 + 100; offset_y = (idx // 3) * 110 + 130
@@ -847,7 +674,7 @@ def get_boq_table(asset):
 
 def describe_concept(asset):
     gfa_m = asset['total_gfa']; gfa_ft = round(gfa_m * M2_TO_FT2, 1)
-    return f"{asset['type']}, {asset['floors']}-storey, {len(asset['plan'])} rooms, in {asset['country']}. {t('gfa_line', gfa_m=gfa_m, gfa_ft=gfa_ft)}"
+    return f"{asset['type']}, {asset['floors']}-storey, {len(asset['plan'])} rooms, in {asset['country']}. GFA: {gfa_m} m² ({gfa_ft} sq ft)"
 
 def generate_gantt_chart(asset):
     gfa = asset["total_gfa"]; floors = asset["floors"]
@@ -865,7 +692,7 @@ def generate_gantt_chart(asset):
     return fig
 
 # ═══════════════════════════════════════════════════════
-# 10. MODERN DARK UI CSS (No galaxy stars, clean futuristic)
+# 10. MODERN UI CSS – Transparent inputs, minimalistic
 # ═══════════════════════════════════════════════════════
 MODERN_CSS = """
 <style>
@@ -885,8 +712,9 @@ html, body, .stApp {
 }
 .stButton > button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(139,92,246,0.6); }
 [data-testid="stSidebar"] { background: rgba(10,10,25,0.9); backdrop-filter: blur(16px); border-right: 1px solid rgba(255,255,255,0.05); }
+/* Transparent inputs */
 .stTextInput > div > div > input, .stNumberInput input, .stSelectbox > div > div, .stTextArea textarea {
-    background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.12) !important;
+    background: transparent !important; border: 1px solid rgba(255,255,255,0.15) !important;
     border-radius: 8px; color: #e2e8f0 !important;
 }
 .stSlider > div > div > div { background: #6366f1 !important; }
@@ -894,16 +722,25 @@ html, body, .stApp {
 .metric-bar-fg { border-radius: 5px; background: linear-gradient(90deg, #6366f1, #38bdf8); }
 </style>
 """
-st.set_page_config(page_title="Arc – Sai Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Arc – Sai Engine", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
 st.markdown(MODERN_CSS, unsafe_allow_html=True)
 
-# Futuristic logo (text only, no image)
-st.markdown("""
+# Minimal Diamond Logo (SVG)
+LOGO_SVG = """
 <div style="text-align:center; padding:10px 0 0 0;">
-    <span style="font-size:2.8rem; font-weight:700; background: linear-gradient(135deg, #6366f1, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">◈ ARC</span>
-    <div style="font-size:0.9rem; color:#a5b4fc;">Architectural Intellect & East African Forex Engine</div>
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L22 12L12 22L2 12L12 2Z" stroke="url(#grad)" stroke-width="2" fill="none"/>
+        <path d="M12 2L22 12L12 22L2 12L12 2Z" fill="url(#grad)" fill-opacity="0.15"/>
+        <defs>
+            <linearGradient id="grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6366f1"/>
+                <stop offset="1" stop-color="#a78bfa"/>
+            </linearGradient>
+        </defs>
+    </svg>
 </div>
-""", unsafe_allow_html=True)
+"""
+st.markdown(LOGO_SVG, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════
 # 11. SESSION INIT
@@ -911,26 +748,27 @@ st.markdown("""
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False; st.session_state.username = None; st.session_state.user_data = None
     st.session_state.memory = DEFAULT_STATE.copy(); st.session_state.generated_concepts = []
-    st.session_state.active_design = None; st.session_state.lang = "en"; st.session_state.unit_system = "metric"
+    st.session_state.active_design = None; st.session_state.unit_system = "metric"
     st.session_state.ram_history = []
 
 if not load_users():
     create_user("admin", "admin123", role="admin")
 
 # ═══════════════════════════════════════════════════════
-# 12. LOGIN PAGE
+# 12. LOGIN PAGE – No "Arc Station", clean
 # ═══════════════════════════════════════════════════════
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.markdown("<div style='text-align:center; margin-top:40px;'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='color:#a78bfa;'>🧠 Arc Station</h2>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; margin-top:60px;'>", unsafe_allow_html=True)
+        st.markdown(LOGO_SVG, unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#a78bfa; font-weight:600;'>Welcome</h2>", unsafe_allow_html=True)
         with st.form("auth_form"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             col_login, col_reg = st.columns(2)
-            with col_login: login_btn = st.form_submit_button("🚀 Launch")
-            with col_reg: register_btn = st.form_submit_button("✨ Register")
+            with col_login: login_btn = st.form_submit_button("Login")
+            with col_reg: register_btn = st.form_submit_button("Sign up")
             if login_btn:
                 user = authenticate(username, password)
                 if user:
@@ -943,20 +781,21 @@ if not st.session_state.logged_in:
                 if not username or not password: st.error("Fill all fields.")
                 else:
                     try:
-                        create_user(username, password); st.success("Account created!")
+                        create_user(username, password); st.success("Account created! You can now log in.")
                     except ValueError as e: st.error(str(e))
     st.stop()
 
 # ═══════════════════════════════════════════════════════
-# 13. LOGGED IN – SIDEBAR WITH CONFIG + GENERATE
+# 13. LOGGED IN – SIDEBAR WITH ARC CONFIG & GENERATE
 # ═══════════════════════════════════════════════════════
 username = st.session_state.username; user_data = st.session_state.user_data; mem = st.session_state.memory
 
 with st.sidebar:
+    # Simple sidebar logo
+    st.markdown(LOGO_SVG, unsafe_allow_html=True)
     st.markdown(f"""
     <div style="text-align:center; margin-bottom:12px;">
-        <div style="font-size:1.2rem; font-weight:700; color:#6366f1;">◈ Arc</div>
-        <div style="font-size:0.8rem; color:#a5b4fc;">{username} · Lvl {user_data['level']}</div>
+        <div style="font-size:0.9rem; color:#a5b4fc;">{username} · Lvl {user_data['level']}</div>
     </div>
     """, unsafe_allow_html=True)
     lvl = user_data["level"]; xp = user_data["xp"]; needed = xp_for_level(lvl); progress = xp/needed if needed>0 else 1.0
@@ -970,55 +809,54 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    lang_option = st.selectbox("🌐 Language", ["English", "Kiswahili"], index=0)
-    st.session_state.lang = "en" if lang_option == "English" else "sw"
-    unit_option = st.selectbox(t("unit_system"), [t("metric"), t("imperial")])
-    st.session_state.unit_system = "metric" if unit_option == t("metric") else "imperial"
+    # Unit system only (no language)
+    unit_option = st.selectbox("📏 Unit System", ["Metric (m, m²)", "Imperial (ft, sq ft)"])
+    st.session_state.unit_system = "metric" if "Metric" in unit_option else "imperial"
 
-    nav_page = st.radio(t("studio_workspace"), [t("dashboard"), t("results"), t("ram_ai_tab")], index=1)
+    nav_page = st.radio("Navigate", ["Dashboard", "Concepts", "Ram AI"])
+
     st.markdown("---")
 
-    with st.expander(t("arc_config"), expanded=True):
-        select_country = st.selectbox(t("select_country"), get_all_countries())
-        select_domain = st.selectbox(t("select_domain"), list(ARCH_DOMAINS.keys()))
-        select_type = st.selectbox(t("select_type"), ARCH_DOMAINS[select_domain])
-        input_plot = st.slider(t("plot_area"), 200, 5000, 800, step=50)
+    # Arc Configuration panel
+    with st.expander("📐 Arc Configuration", expanded=True):
+        st.markdown("**Trade Region · East African Countries**")
+        select_country = st.selectbox("Country", get_all_countries())
+        select_domain = st.selectbox("Domain", list(ARCH_DOMAINS.keys()))
+        select_type = st.selectbox("Typology", ARCH_DOMAINS[select_domain])
+        input_plot = st.slider("Plot Area (m²)", 200, 5000, 800, step=50)
         if st.session_state.unit_system == "imperial":
-            st.caption(t("plot_area_caption", area_ft=round(input_plot*M2_TO_FT2,0)))
-        input_floors = st.slider(t("floors"), 1, 12, 3)
-        input_baths = st.slider(t("bathrooms"), 1, 10, 2)
-        # Soil – region‑specific description auto‑selected, with override
+            area_ft = round(input_plot * M2_TO_FT2, 0)
+            st.caption(f"= {area_ft} sq ft")
+        input_floors = st.slider("Floors", 1, 12, 3)
+        input_baths = st.slider("Bathrooms", 1, 10, 2)
+
+        # Region-specific soil with description
         default_desc, default_cat = REGION_SOIL_MAP[select_country]
         soil_labels = {
-            "soft": t("soil_soft"), "medium": t("soil_medium"), "rock": t("soil_rock")
+            "soft": "Soft Clay/Silt", "medium": "Medium Sand/Gravel", "rock": "Rock/Laterite"
         }
-        soil_descriptions = {
-            "soft": f"{default_desc} ({soil_labels['soft']})",
-            "medium": f"{default_desc} ({soil_labels['medium']})" if default_cat != "medium" else f"{default_desc} ({soil_labels['medium']})",
-            "rock": f"{default_desc} ({soil_labels['rock']})" if default_cat != "rock" else f"{default_desc} ({soil_labels['rock']})",
-        }
-        # For simplicity, show the region's default as the first option, but allow switching category
         category_options = ["soft", "medium", "rock"]
         default_index = category_options.index(default_cat)
         selected_cat = st.selectbox(
-            t("soil_type"),
+            "🌱 Soil Condition",
             [f"{soil_labels[c]} (e.g., {default_desc})" for c in category_options],
             index=default_index
         )
         selected_soil_cat = category_options[[f"{soil_labels[c]} (e.g., {default_desc})" for c in category_options].index(selected_cat)]
 
-    with st.expander(t("ai_weights"), expanded=False):
-        w_arch = st.slider(t("arch_weight"), 0.0, 1.0, 0.25, 0.05)
-        w_struct = st.slider(t("struct_weight"), 0.0, 1.0, 0.25, 0.05)
-        w_sust = st.slider(t("sust_weight"), 0.0, 1.0, 0.25, 0.05)
-        w_cost = st.slider(t("cost_weight"), 0.0, 1.0, 0.25, 0.05)
+    with st.expander("⚖️ AI Weights", expanded=False):
+        w_arch = st.slider("Architecture", 0.0, 1.0, 0.25, 0.05)
+        w_struct = st.slider("Structural", 0.0, 1.0, 0.25, 0.05)
+        w_sust = st.slider("Sustainability", 0.0, 1.0, 0.25, 0.05)
+        w_cost = st.slider("Cost", 0.0, 1.0, 0.25, 0.05)
         total_w = w_arch+w_struct+w_sust+w_cost
         if total_w>0: w_arch/=total_w; w_struct/=total_w; w_sust/=total_w; w_cost/=total_w
         weights = (w_arch, w_struct, w_sust, w_cost)
         st.caption(f"Norm: arch {w_arch:.2f} struct {w_struct:.2f} sust {w_sust:.2f} cost {w_cost:.2f}")
 
+    # Prompt and Generate button inside Arc Configuration
     prompt_text = st.text_area("💡 Prompt (optional)", placeholder="e.g. sustainable beach house...", height=68)
-    if st.button(t("generate_btn"), use_container_width=True):
+    if st.button("✨ Generate Concepts", use_container_width=True):
         with st.spinner("Sai Engine synthesizing 5 concepts..."):
             concepts = []
             for i in range(5):
@@ -1043,37 +881,37 @@ with st.sidebar:
             if leveled_up: st.balloons()
             st.rerun()
 
-    with st.expander(t("forex_converter"), expanded=False):
-        if st.button(t("refresh_fx"), use_container_width=True):
+    with st.expander("💱 Forex Converter", expanded=False):
+        if st.button("🔄 Refresh Live Rates", use_container_width=True):
             initialize_fx_rates.clear(); initialize_fx_rates(); st.rerun()
         currencies = ["USD"] + get_all_countries()
-        convert_from = st.selectbox(t("from"), currencies, key="conv_from")
-        convert_to = st.selectbox(t("to"), currencies, key="conv_to")
-        amount = st.number_input(t("amount"), value=1000.0, step=100.0)
+        convert_from = st.selectbox("From", currencies, key="conv_from")
+        convert_to = st.selectbox("To", currencies, key="conv_to")
+        amount = st.number_input("Amount", value=1000.0, step=100.0)
         result = convert_currency(amount, convert_from, convert_to)
         sym_from = "$" if convert_from=="USD" else get_fx_data(convert_from)["symbol"]
         sym_to = "$" if convert_to=="USD" else get_fx_data(convert_to)["symbol"]
         st.metric(label=f"{sym_from} {amount:,.2f}", value=f"{sym_to} {result:,.2f}")
 
     st.markdown("---")
-    st.markdown(t("project_memory"))
+    st.markdown("📂 Project Memory")
     if mem["designs"]:
         for d in mem["designs"][-5:]:
             st.markdown(f"<div style='background:rgba(255,255,255,0.04); border-radius:8px; padding:6px; margin:4px 0; font-size:0.8rem;'>🏗️ #{d['id']} - {d['type']}</div>", unsafe_allow_html=True)
     else:
-        st.caption(t("no_designs"))
+        st.caption("No designs yet")
 
     if st.button("🚪 Logout", use_container_width=True):
         save_memory(username, mem); st.session_state.logged_in = False; st.rerun()
 
 # ═══════════════════════════════════════════════════════
-# 14. MAIN AREA – TABS
+# 14. MAIN AREA – TABS (Dashboard / Concepts / Ram AI)
 # ═══════════════════════════════════════════════════════
-if nav_page == t("dashboard"):
-    st.markdown(f"<div class='glass-panel' style='text-align:center; margin-bottom:24px;'><h2 style='margin:0; color:#6366f1;'>{t('welcome')}</h2><p style='color:#a5b4fc;'>{t('tagline')}</p></div>", unsafe_allow_html=True)
+if nav_page == "Dashboard":
+    st.markdown(f"<div class='glass-panel' style='text-align:center; margin-bottom:24px;'><h2 style='margin:0; color:#6366f1;'>Welcome back, Architect 👋</h2><p style='color:#a5b4fc;'>Create. Evolve. Perfect.</p></div>", unsafe_allow_html=True)
 
     # Live FX rates with % change
-    st.markdown(f"### {t('live_fx')}")
+    st.markdown("### 💹 Live East African FX Rates")
     fx_cols = st.columns(6)
     for i, country in enumerate(get_all_countries()):
         data = get_fx_data(country)
@@ -1090,9 +928,9 @@ if nav_page == t("dashboard"):
             </div>
             """, unsafe_allow_html=True)
 
-    # Multi‑currency FX history
     st.markdown("---")
-    with st.expander(t("kes_history"), expanded=True):
+    # Multi-currency history
+    with st.expander("📈 East African FX History (60 days)", expanded=True):
         end_date = datetime.today(); start_date = end_date - timedelta(days=60)
         df_multi = fetch_historical_fx_multi(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
         if df_multi is not None and not df_multi.empty:
@@ -1113,8 +951,8 @@ if nav_page == t("dashboard"):
 
     # Forex Forest
     st.markdown("---")
-    st.markdown(f"### {t('forex_forest')}")
-    st.caption(t("forex_forest_desc"))
+    st.markdown("### 🌳 Forex Forest – Weekly Forecast")
+    st.caption("Monte Carlo simulation of possible rate paths over the next 7 days")
     forest_country = st.selectbox("Select country for forecast", get_all_countries(), key="forest_country")
     base_rate = _CURRENT_RATES[forest_country]
     currency = _CURRENCY_INFO[forest_country]["currency"]
@@ -1123,11 +961,11 @@ if nav_page == t("dashboard"):
 
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
-    with c1: st.metric(t("total_blueprints"), len(mem["designs"]), delta="+1")
-    with c2: st.metric(t("arch_concepts"), len(mem["designs"])*5, delta="Evolving")
-    with c3: st.metric(t("pipeline_logs"), len(mem["logs"]))
+    with c1: st.metric("Blueprints", len(mem["designs"]), delta="+1")
+    with c2: st.metric("Concepts", len(mem["designs"])*5, delta="Evolving")
+    with c3: st.metric("Logs", len(mem["logs"]))
 
-elif nav_page == t("results"):
+elif nav_page == "Concepts":
     if st.session_state.generated_concepts:
         concepts = st.session_state.generated_concepts
         st.markdown("## 🔬 Evolution Engine Results")
@@ -1138,38 +976,38 @@ elif nav_page == t("results"):
         for idx, (tab, c) in enumerate(zip(tabs, concepts)):
             with tab:
                 sc = c["scores"]; ec = c["eurocode"]
-                st.markdown(f"**{t('description_prefix')}** {describe_concept(c)}")
+                st.markdown(f"**Design brief:** {describe_concept(c)}")
                 col1, col2 = st.columns([3,2])
                 with col1:
-                    st.markdown(f"### {t('2d_floor_plan')}")
+                    st.markdown("### 🗺️ 2D Floor Plan")
                     fig_fp = render_floorplan_diagram(c["plan"], span=c["structural"]["span"])
                     st.plotly_chart(fig_fp, use_container_width=True, key=f"fp_{idx}")
-                    st.caption(f"{t('floor_area_line', fa_m=c['floor_area'], fa_ft=round(c['floor_area']*M2_TO_FT2,1))} | {c['floors']} floors | {c['country']}")
-                    with st.expander(t("material_breakdown")):
+                    st.caption(f"Floor Area: {c['floor_area']} m² | {c['floors']} floors | {c['country']}")
+                    with st.expander("🧱 Material Breakdown"):
                         st.dataframe(get_boq_table(c), use_container_width=True)
                 with col2:
                     for label_key, key, bar_color in [
-                        ('arch_ai','arch','#4ade80'),('struct_ai','struct','#00d2ff'),
-                        ('sust_ai','sust','#38bdf8'),('cost_ai','cost','#facc15')
+                        ('🏛️ Architect AI','arch','#4ade80'),('⚙️ Structural AI','struct','#00d2ff'),
+                        ('🌱 Sustainability AI','sust','#38bdf8'),('💰 Cost AI','cost','#facc15')
                     ]:
                         st.markdown(f"""
                         <div style="margin-bottom:6px;">
-                            <div style="display:flex; align-items:center; font-size:12px; color:#94a3b8;">{t(label_key)} {sc[key]}%</div>
+                            <div style="display:flex; align-items:center; font-size:12px; color:#94a3b8;">{label_key} {sc[key]}%</div>
                             <div class="metric-bar-bg"><div class="metric-bar-fg" style="width:{sc[key]}%; background:{bar_color};"></div></div>
                         </div>
                         """, unsafe_allow_html=True)
-                    st.metric(t('usd_total'), f"${c['total_usd']:,.0f}")
-                    st.metric(f"{t('local_currency')} {c['fx']['currency']}", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
-                    st.markdown(f"### {t('3d_massing')}")
-                    view_mode = st.radio(t("view_mode_3d"), [t("isometric"), t("interactive_3d")], horizontal=True, key=f"3d_{idx}")
-                    if view_mode == t("isometric"):
+                    st.metric("USD Total", f"${c['total_usd']:,.0f}")
+                    st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
+                    st.markdown("### 📦 3D Massing")
+                    view_mode = st.radio("View", ["Isometric", "Interactive"], horizontal=True, key=f"3d_{idx}")
+                    if view_mode == "Isometric":
                         st.components.v1.html(render_isometric_html(c["plan"], span=c["structural"]["span"]), height=400)
                     else:
                         fig3d = render_plotly_3d_rooms(c["plan"], floors=c["floors"], span=c["structural"]["span"])
                         st.plotly_chart(fig3d, use_container_width=True, key=f"3d_{idx}")
 
-        # Radar
-        with st.expander(t("radar_title"), expanded=False):
+        # Radar comparison
+        with st.expander("📊 AI Score Radar Comparison", expanded=False):
             radar_data = [{"Concept":f"{concept_names[i]} ({c['type']})",
                            "Architecture":c["scores"]["arch"],"Structural":c["scores"]["struct"],
                            "Sustainability":c["scores"]["sust"],"Cost Efficiency":c["scores"]["cost"]}
@@ -1185,14 +1023,14 @@ elif nav_page == t("results"):
 
         asset = concepts[0]
         st.markdown("---")
-        st.markdown(f"### {t('top_recommendation')}")
+        st.markdown("### 🏆 TOP RECOMMENDATION: CONCEPT ALPHA")
         col_save, col_export = st.columns(2)
         with col_save:
-            if st.button(t("save_library")):
+            if st.button("💾 Save to Library"):
                 mem["designs"].append({"id":asset["id"],"type":asset["type"],"country":asset["country"],
                                       "total_gfa":asset["total_gfa"],"scores":asset["scores"],
                                       "plan":asset["plan"],"timestamp":datetime.now().isoformat()})
-                save_memory(username, mem); st.success(t("saved_success"))
+                save_memory(username, mem); st.success("Design saved!")
         with col_export:
             export_df = pd.DataFrame([{
                 "ID":c["id"],"Type":c["type"],"Country":c["country"],"Soil":c.get("soil_category","medium"),
@@ -1202,20 +1040,20 @@ elif nav_page == t("results"):
                 "Sust%":c["scores"]["sust"],"CostEff%":c["scores"]["cost"],"Composite":c["scores"]["composite"]
             } for c in concepts])
             csv = export_df.to_csv(index=False).encode()
-            st.download_button(t("export_csv"), csv, file_name="arc_concepts.csv", mime="text/csv")
+            st.download_button("📥 Export All Concepts as CSV", csv, file_name="arc_concepts.csv", mime="text/csv")
 
-        with st.expander(t("gantt_expander")):
+        with st.expander("📅 Construction Gantt Chart"):
             fig_gantt = generate_gantt_chart(asset)
             st.plotly_chart(fig_gantt, use_container_width=True)
     else:
-        st.info(t("awaiting_input"))
+        st.info("No designs generated yet. Configure parameters in the sidebar and click **Generate Concepts**.")
 
-elif nav_page == t("ram_ai_tab"):
-    st.markdown(f"## 🧠 Ram AI – {t('ram_ai_desc')}")
+elif nav_page == "Ram AI":
+    st.markdown("## 🧠 Ram AI – Infinite Architectural Intelligence")
     st.markdown("Ask Ram anything about construction, soil, costs, or design in East Africa.")
     with st.form("ram_form"):
-        user_q = st.text_input("Your question:", placeholder=t("ram_placeholder"))
-        submitted = st.form_submit_button(t("ram_ask_btn"))
+        user_q = st.text_input("Your question:", placeholder="Ask Ram about soil, foundations, costs...")
+        submitted = st.form_submit_button("Ask Ram AI")
     if submitted and user_q:
         with st.spinner("Ram is thinking..."):
             response = ram_ai_response(user_q, select_country, select_domain)
