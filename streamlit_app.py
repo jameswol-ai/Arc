@@ -1,3 +1,4 @@
+
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Minimal Logo, Region‑Based Soils,
