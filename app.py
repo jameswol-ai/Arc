@@ -1,1074 +1,662 @@
-# 
-# app.py
-from streamlit_app import main
-if __name__ == "__main__":
-    main()
-
-=========================================================
-# ARC — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
-# Multi-Story Floor Plan, Eurocode Selector & Zoning Engine
-# Zero-Dependency Single-File Streamlit Implementation (v17 — Dynamic Structural & Intelligent Layout)
+# =========================================================
+# Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
+# app.py – Deploy ready (Vercel / Streamlit Cloud)
 # =========================================================
 
 import streamlit as st
-import json
-import uuid
-import random
-import math
+import json, random, uuid, hashlib, requests
+import plotly.express as px
+import plotly.graph_objects as go
 from pathlib import Path
 from datetime import datetime, timedelta
+import numpy as np, pandas as pd
 
-# =========================================================
-# SYSTEM CONFIG & UI STYLING
-# =========================================================
+# ════════════════  UNIT CONVERSION  ════════════════
+M2_TO_FT2, M_TO_FT = 10.7639, 3.28084
 
-st.set_page_config(
-    page_title="Arc Studio | Oculus Rift",
-    page_icon="📐",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+def to_display_length(m):
+    return (round(m * M_TO_FT, 1), "ft") if st.session_state.get("unit_system") == "imperial" else (round(m, 1), "m")
 
-MEMORY_FILE = Path("arc_studio_v15.json")
+def to_display_area(m2):
+    return (round(m2 * M2_TO_FT2, 1), "sq ft") if st.session_state.get("unit_system") == "imperial" else (round(m2, 1), "m²")
 
-# =========================================================
-# STUNNING CUSTOM THEME — DEEP SPACE / NEON CYBERPUNK
-# =========================================================
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
-    
-    /* ---------- GLOBAL RESETS ---------- */
-    html, body, [data-testid="stAppViewContainer"], .main {
-        background: radial-gradient(ellipse at 20% 50%, #0a0f1c 0%, #03050b 70%);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: #e0e7ff;
-        scrollbar-width: thin;
-        scrollbar-color: #1e293b #0b0f19;
-    }
+# ════════════════  AUTH & MEMORY  ════════════════
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+USER_FILE = DATA_DIR / "arc_users.json"
+XP_PER_LEVEL = 100
 
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #0b0f19;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #4b5563;
-    }
+def hash_password(p): return hashlib.sha256((p + "arc_salt_42").encode()).hexdigest()
 
-    /* Typography */
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.8rem;
-    }
-    
-    p, li, span, div {
-        color: #cbd5e1;
-    }
+def load_users():
+    if USER_FILE.exists():
+        try: return json.load(open(USER_FILE))
+        except: return []
+    return []
 
-    /* ---------- SIDEBAR ---------- */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(145deg, #060b17 0%, #030712 100%);
-        border-right: 1px solid rgba(56, 189, 248, 0.15);
-        box-shadow: 4px 0 30px rgba(0, 229, 255, 0.05);
-    }
-    [data-testid="stSidebar"] * {
-        color: #cbd5e1 !important;
-    }
-    [data-testid="stSidebar"] .stSelectbox label, 
-    [data-testid="stSidebar"] .stSlider label {
-        font-weight: 600;
-        color: #94a3b8 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .sidebar .st-emotion-cache-1wrcr7h, .sidebar .st-emotion-cache-1xarl3l {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid #2d3a5a;
-        border-radius: 10px;
-        padding: 10px;
-    }
+def save_users(users): json.dump(users, open(USER_FILE, "w"), indent=2)
 
-    /* ---------- METRIC CARDS ---------- */
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.4));
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        border-radius: 18px;
-        padding: 18px 22px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(56, 189, 248, 0.1) inset;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(4px);
-    }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        border-color: #38bdf8;
-        box-shadow: 0 12px 40px rgba(0, 229, 255, 0.15);
-    }
-    div[data-testid="stMetric"] label {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 0.85rem;
-        color: #94a3b8 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #f8fafc;
-        text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
-    }
+def get_user(u):
+    for x in load_users():
+        if x["username"] == u: return x
+    return None
 
-    /* ---------- BUTTONS ---------- */
-    .stButton > button {
-        background: linear-gradient(135deg, #1e293b, #0f172a);
-        border: 1px solid #38bdf8;
-        color: #e0e7ff;
-        border-radius: 12px;
-        padding: 12px 24px;
-        font-weight: 700;
-        font-family: 'Space Grotesk', sans-serif;
-        letter-spacing: 0.02em;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-        text-transform: uppercase;
-    }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #0f172a, #020617);
-        border-color: #f59e0b;
-        color: #f59e0b;
-        box-shadow: 0 0 25px #f59e0b80;
-        transform: translateY(-2px);
-    }
+def create_user(u, p, role="user"):
+    if get_user(u): raise ValueError("Username exists")
+    users = load_users()
+    users.append({"username": u, "password_hash": hash_password(p), "role": role, "level": 1, "xp": 0, "badges": [], "created": datetime.now().isoformat()})
+    save_users(users)
+    return users[-1]
 
-    /* ---------- TABS (GLOWING PILLS) ---------- */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-        background: transparent;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: rgba(15, 23, 42, 0.7);
-        border-radius: 30px;
-        padding: 10px 24px;
-        font-weight: 600;
-        border: 1px solid #2d3a5a;
-        color: #cbd5e1;
-        transition: all 0.3s ease;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(30, 41, 59, 0.8);
-        border-color: #38bdf8;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #1e3a5f, #0f172a) !important;
-        border-color: #38bdf8 !important;
-        color: #38bdf8 !important;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
-        font-weight: 700;
-    }
+def authenticate(u, p):
+    user = get_user(u)
+    return user if user and user["password_hash"] == hash_password(p) else None
 
-    /* ---------- CUSTOM CARDS (Room Cards) ---------- */
-    .blueprint-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        gap: 18px;
-        background: transparent;
-        padding: 0;
-        margin: 20px 0;
-    }
-    .room-card {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.3));
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    .room-card:hover {
-        transform: translateY(-6px) scale(1.02);
-        border-color: #f59e0b;
-        box-shadow: 0 0 35px rgba(245, 158, 11, 0.3);
-    }
-    .room-name {
-        font-size: 1.2rem;
-        font-weight: 700;
-        font-family: 'Space Grotesk', sans-serif;
-        margin-bottom: 8px;
-        background: linear-gradient(to right, #e0e7ff, #a5b4fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    .room-specs {
-        font-family: 'Space Grotesk', monospace;
-        font-size: 0.85rem;
-        letter-spacing: 0.02em;
-        opacity: 0.7;
-    }
+def xp_for_level(lvl): return lvl * XP_PER_LEVEL
 
-    /* ---------- SLIDERS / SELECTS / INPUTS ---------- */
-    .stSlider, .stSelectbox, .stNumberInput {
-        background: transparent !important;
-    }
-    .stSlider > div > div > div > div {
-        background: #1e293b;
-        border-radius: 5px;
-    }
-    
-    /* ---------- GLOWING DIVIDERS ---------- */
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-        margin: 30px 0;
-    }
-</style>
-""", unsafe_allow_html=True)
+def add_xp(username, amount):
+    user = get_user(username)
+    if not user: return False
+    user["xp"] += amount
+    old = user["level"]
+    while user["xp"] >= xp_for_level(user["level"]):
+        user["xp"] -= xp_for_level(user["level"]); user["level"] += 1
+    if user["level"] > old:
+        badge = f"level_{user['level']}"
+        if user["level"] % 5 == 0 and badge not in user["badges"]: user["badges"].append(badge)
+        update_users = load_users()
+        for u in update_users:
+            if u["username"] == username: u.update(user); break
+        save_users(update_users)
+        return True
+    return False
 
-# =========================================================
-# DATA CONFIGURATIONS (unchanged)
-# =========================================================
+def load_memory(username):
+    path = DATA_DIR / f"{username}_arc_memory.json"
+    if path.exists():
+        try: return json.load(open(path, "r", encoding="utf-8"))
+        except: pass
+    return {"designs": [], "concepts": [], "logs": []}
 
-REGIONAL_FX = {
-    "Kenya": {"currency": "KES", "rate_to_usd": 129.49, "symbol": "KSh", "cost_multiplier": 1.0, "risk_premium": 0.02},
-    "Uganda": {"currency": "UGX", "rate_to_usd": 3665.20, "symbol": "USh", "cost_multiplier": 0.95, "risk_premium": 0.03},
-    "Tanzania": {"currency": "TZS", "rate_to_usd": 2625.00, "symbol": "TSh", "cost_multiplier": 0.98, "risk_premium": 0.025},
-    "South Sudan": {"currency": "SSP", "rate_to_usd": 4626.40, "symbol": "SSP", "cost_multiplier": 1.35, "risk_premium": 0.08}
+def save_memory(username, mem): json.dump(mem, open(DATA_DIR / f"{username}_arc_memory.json", "w", encoding="utf-8"), indent=2)
+
+def log_event(username, mem, msg):
+    mem["logs"].append({"time": datetime.now().isoformat(), "msg": msg})
+    save_memory(username, mem)
+
+# ════════════════  ENHANCED SOIL SYSTEM  ════════════════
+SOIL_TYPES = {
+    "Nairobi Red Coffee Clay":             {"multiplier": 1.0,  "cat": "Medium", "region": "Kenya"},
+    "Kampala Red Lateritic Clay":          {"multiplier": 1.6,  "cat": "Soft",   "region": "Uganda"},
+    "Wetland Silts (Kampala)":             {"multiplier": 1.7,  "cat": "Very Soft","region": "Uganda"},
+    "Dar Coastal Sand / Coral Limestone":  {"multiplier": 0.85, "cat": "Rock",   "region": "Tanzania"},
+    "Juba Black Cotton Soil (Expansive)":  {"multiplier": 1.8,  "cat": "Very Soft","region": "South Sudan"},
+    "Kigali Volcanic Andosols":            {"multiplier": 0.7,  "cat": "Rock",   "region": "Rwanda"},
+    "Addis Clayey Soils & Volcanic Tuff":  {"multiplier": 1.5,  "cat": "Soft",   "region": "Ethiopia"},
+    "Generic Firm Sandy Gravel":           {"multiplier": 1.0,  "cat": "Medium", "region": "All"},
+    "Generic Soft Silt / Clay":            {"multiplier": 1.5,  "cat": "Soft",   "region": "All"},
+    "Generic Hard Rock / Laterite":        {"multiplier": 0.7,  "cat": "Rock",   "region": "All"},
 }
 
+REGION_SOIL_OPTIONS = {
+    "Kenya":       [("Nairobi Red Coffee Clay", "medium"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft"), ("Generic Hard Rock / Laterite", "rock")],
+    "Uganda":      [("Kampala Red Lateritic Clay", "soft"), ("Wetland Silts (Kampala)", "very soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+    "Tanzania":    [("Dar Coastal Sand / Coral Limestone", "rock"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft")],
+    "South Sudan": [("Juba Black Cotton Soil (Expansive)", "very soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+    "Rwanda":      [("Kigali Volcanic Andosols", "rock"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft")],
+    "Ethiopia":    [("Addis Clayey Soils & Volcanic Tuff", "soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+}
+
+def get_soil_multiplier(soil_name):
+    return SOIL_TYPES.get(soil_name, {"multiplier": 1.0})["multiplier"]
+
+def get_soil_category(soil_name):
+    return SOIL_TYPES.get(soil_name, {"cat": "Medium"})["cat"]
+
+# ════════════════  SAI ENGINE  ════════════════
 ARCH_DOMAINS = {
-    "Residential": {
-        "types": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
-        "max_coverage": 0.50,
-        "max_far": 2.5
-    },
-    "Commercial": {
-        "types": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
-        "max_coverage": 0.70,
-        "max_far": 4.5
-    },
-    "Industrial": {
-        "types": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
-        "max_coverage": 0.60,
-        "max_far": 1.8
-    }
+    "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
+    "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
+    "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
 }
 
-SOIL_PROFILES = {
-    "Kampala Red Lateritic Clay": {"cohesion": 35, "friction_angle": 12, "unit_weight": 18.0, "description": "Highly weathered cohesive soil profile"},
-    "Nairobi Black Cotton Soil": {"cohesion": 15, "friction_angle": 8, "unit_weight": 16.5, "description": "High expansivity index, requires deep mechanics"},
-    "Coastal Quartz Sand (Dar)": {"cohesion": 0, "friction_angle": 32, "unit_weight": 19.0, "description": "Cohesionless granular clean sand stratum"},
-    "Juba Alluvial Silt Deposit": {"cohesion": 20, "friction_angle": 15, "unit_weight": 17.5, "description": "Moderate settlement vulnerability under cyclic loading"}
-}
+def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, seed=0):
+    rng = random.Random(seed)
+    plot = max(200, plot_size + rng.randint(-300, 300))
+    max_fp = int(plot * rng.uniform(0.5, 0.75))
+    fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
+    gfa = fa * floors
 
-# =========================================================
-# STATE MANAGEMENT (unchanged)
-# =========================================================
+    span = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
+    span *= rng.uniform(0.85, 1.15)
+    cols = max(8, int((fa / (span * 5.0)) * rng.uniform(3, 5)))
+    beams = int(cols * rng.uniform(1.5, 2.2))
 
-DEFAULT_STATE = {
-    "designs": [],
-    "logs": []
-}
-
-def load_memory():
-    if MEMORY_FILE.exists():
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return DEFAULT_STATE.copy()
-    return DEFAULT_STATE.copy()
-
-def save_memory():
-    try:
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(st.session_state.memory, f, indent=2)
-    except Exception:
-        pass
-
-def log_event(msg):
-    st.session_state.memory["logs"].append({
-        "time": datetime.now().isoformat(),
-        "msg": msg
-    })
-    save_memory()
-
-if "memory" not in st.session_state:
-    st.session_state.memory = load_memory()
-
-if "active_design" not in st.session_state:
-    st.session_state.active_design = None
-
-# =========================================================
-# INTELLIGENT FLOOR PLAN LAYOUT ENGINE
-# =========================================================
-
-def generate_intelligent_layout(rooms, nx, ny, span):
-    """
-    Returns a 2D list (ny rows × nx cols) where each cell is a dict:
-      {'room_index': int, 'room_name': str, 'color': str}
-    Places a central corridor row and distributes other rooms into wings.
-    """
-    # Separate circulation from other rooms
-    circulation = [r for r in rooms if r["type"] == "Circulation"]
-    other = [r for r in rooms if r["type"] != "Circulation"]
-
-    grid = [[None for _ in range(nx)] for _ in range(ny)]
-
-    # Corridor row: middle row (index floor(ny/2))
-    corridor_row = ny // 2
-    corridor_name = "Main Corridor Gallery"
-    corridor_color = "#1e293b"
-    # Use the first circulation room if available, else placeholder
-    if circulation:
-        corridor_idx = rooms.index(circulation[0])
-    else:
-        corridor_idx = None
-
-    for col in range(nx):
-        grid[corridor_row][col] = {
-            "room_index": corridor_idx,
-            "room_name": corridor_name,
-            "color": corridor_color
-        }
-
-    # Distribute remaining rooms into rows above and below corridor
-    rows_above = list(range(0, corridor_row))
-    rows_below = list(range(corridor_row+1, ny))
-    row_pool = rows_above + rows_below   # simple concatenation
-
-    # Group by type to keep similar rooms together
-    private = [r for r in other if r["type"] == "Private"]
-    public = [r for r in other if r["type"] in ("Living Space", "Workspace")]
-    service = [r for r in other if r["type"] in ("Utility", "Sanitary", "Industrial")]
-    ordered_rooms = public + private + service   # public first
-
-    room_idx = 0
-    for row in row_pool:
-        for col in range(nx):
-            if room_idx >= len(ordered_rooms):
-                break
-            room = ordered_rooms[room_idx]
-            grid[row][col] = {
-                "room_index": rooms.index(room),
-                "room_name": room["name"],
-                "color": room["color"]
-            }
-            room_idx += 1
-        if room_idx >= len(ordered_rooms):
-            break
-
-    # If any rooms left (more rooms than cells), fill remaining cells
-    while room_idx < len(ordered_rooms):
-        for row in range(ny):
-            for col in range(nx):
-                if grid[row][col] is None:
-                    grid[row][col] = {
-                        "room_index": rooms.index(ordered_rooms[room_idx]),
-                        "room_name": ordered_rooms[room_idx]["name"],
-                        "color": ordered_rooms[room_idx]["color"]
-                    }
-                    room_idx += 1
-                    if room_idx >= len(ordered_rooms):
-                        break
-            if room_idx >= len(ordered_rooms):
-                break
-
-    return grid
-
-# =========================================================
-# SPATIAL SYNTHESIS ENGINE (SAI) — upgraded with loads & layout
-# =========================================================
-
-def generate_building_model(domain, btype, floors, bathrooms, country, material_frame, plot_size, soil_type,
-                            g_k, q_k, steel_section):
-    rooms = []
-    rooms.append({"name": "Main Corridor Gallery", "type": "Circulation", "w": 3, "h": 12, "color": "#1e293b", "doors": 3, "windows": 1})
-
-    if floors > 1:
-        core_type = "Elevator Shaft" if domain == "Commercial" or floors > 4 else "Stairwell Core"
-        rooms.append({"name": f"Vertical {core_type}", "type": "Circulation", "w": 4, "h": 4, "color": "#334155", "doors": floors, "windows": 0})
-
-    if domain == "Residential":
-        rooms.append({"name": "Grand Living Room", "type": "Living Space", "w": 8, "h": 6, "color": "#0d2040", "doors": 2, "windows": 4})
-        rooms.append({"name": "Chef's Kitchen Deck", "type": "Utility", "w": 4, "h": 4, "color": "#053020", "doors": 1, "windows": 2})
-        bedroom_count = max(1, floors)
-        for i in range(bedroom_count):
-            rooms.append({"name": f"Master Suite Room {i+1}", "type": "Private", "w": 5, "h": 4, "color": "#2a0f4d", "doors": 1, "windows": 2})
-    elif domain == "Commercial":
-        rooms.append({"name": "Co-Working Hub Suite", "type": "Workspace", "w": 12, "h": 8, "color": "#075e8a", "doors": 3, "windows": 6})
-        rooms.append({"name": "Executive Dialogue Hall", "type": "Workspace", "w": 6, "h": 5, "color": "#1e1b4b", "doors": 1, "windows": 2})
-    else:
-        rooms.append({"name": "Main Production Floor", "type": "Industrial", "w": 20, "h": 12, "color": "#3b0764", "doors": 2, "windows": 8})
-        rooms.append({"name": "Logistics Dispatch Terminal", "type": "Industrial", "w": 8, "h": 8, "color": "#451a03", "doors": 2, "windows": 1})
-
-    for b in range(bathrooms):
-        rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Sanitary", "w": 3, "h": 3, "color": "#4a2306", "doors": 1, "windows": 1})
-
-    total_doors = sum(r["doors"] for r in rooms)
-    total_windows = sum(r["windows"] for r in rooms)
-
-    ground_footprint = sum(r["w"] * r["h"] for r in rooms)
-    gfa = ground_footprint * floors
-
-    span_length = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
-    col_count = max(12, int((ground_footprint / (span_length * 4.0)) * 4))
-    beam_count = int(col_count * 1.8)
-
-    # Compute grid dimensions for intelligent layout
-    bay_area = span_length * span_length
-    total_bays = max(2, math.ceil(ground_footprint / bay_area))
-    nx = max(2, math.ceil(math.sqrt(total_bays)))
-    ny = max(2, math.ceil(total_bays / nx))
-    layout_grid = generate_intelligent_layout(rooms, nx, ny, span_length)
-
-    return {
-        "id": str(uuid.uuid4())[:6].upper(),
-        "domain": domain,
-        "type": btype,
-        "floors": floors,
-        "ground_footprint": ground_footprint,
-        "total_gfa": gfa,
-        "doors": total_doors,
-        "windows": total_windows,
-        "country": country,
-        "rooms": rooms,
-        "material_frame": material_frame,
-        "plot_size": plot_size,
-        "soil_type": soil_type,
-        "structural": {
-            "columns": int(col_count * floors),
-            "beams": int(beam_count * floors),
-            "span": span_length
-        },
-        "loads": {
-            "g_k": g_k,
-            "q_k": q_k,
-            "steel_section": steel_section
-        },
-        "layout": {
-            "grid": layout_grid,
-            "nx": nx,
-            "ny": ny
-        }
-    }
-
-# =========================================================
-# ENGINEERING & COMPLIANCE — Dynamic Structural Analysis
-# =========================================================
-
-def run_eurocode_analysis(design):
-    span = design["structural"]["span"]
-    domain = design["domain"]
-    material_frame = design["material_frame"]
-    soil_type = design["soil_type"]
-    floors = design["floors"]
-    loads = design["loads"]
-    g_k = loads["g_k"]
-    q_k = loads["q_k"]
-
-    # ----- ULS bending with actual tributary width -----
-    design_load_kpa = (1.35 * g_k) + (1.50 * q_k)
-    tributary_width = span          # regular grid
-    w_ed = design_load_kpa * tributary_width   # kN/m
-    m_ed = (w_ed * (span ** 2)) / 8             # kNm (simply supported)
-
-    # ----- Material resistance -----
-    if material_frame == "Reinforced Concrete (Eurocode 2)":
-        b = 300            # mm
-        d_eff = 450        # mm (cover assumed)
-        f_ck = 30          # MPa
-        f_yk = 500         # MPa
-
-        M_ed_Nmm = m_ed * 1e6
-        z = 0.95 * d_eff
-        A_s_req = M_ed_Nmm / (0.87 * f_yk * z)   # mm²
-
-        # Simplified iterative improvement
-        x = (A_s_req * 0.87 * f_yk) / (0.85 * f_ck * b * 0.8)
-        if x > 0.45 * d_eff:
-            A_s_req *= 1.2
-        bar_dia = 20
-        bar_area = 3.14159 * (bar_dia**2) / 4
-        n_bars = max(2, math.ceil(A_s_req / bar_area))
-        A_s_prov = n_bars * bar_area
-
-        x_prov = (A_s_prov * 0.87 * f_yk) / (0.85 * f_ck * b * 0.8)
-        z_prov = d_eff - 0.4 * x_prov
-        m_rd = (0.87 * f_yk * A_s_prov * z_prov) / 1e6
-        standard_label = f"RC Beam {b}×{d_eff}mm, {n_bars}H{bar_dia} ({A_s_prov:.0f} mm²)"
-        code_ref = "EC2 – Rectangular Stress Block"
-        formula_latex = r"M_{Rd} = 0.87 \cdot f_{yk} \cdot A_s \cdot z"
-
-    elif material_frame == "Structural Steel Profile (Eurocode 3)":
-        STEEL_SECTIONS = {
-            "UB 254x146x31":  {"Wpl_y": 377e3, "fy": 275},
-            "UB 305x165x40": {"Wpl_y": 623e3, "fy": 275},
-            "UC 254x254x73": {"Wpl_y": 1090e3, "fy": 275},
-            "UC 305x305x97": {"Wpl_y": 1869e3, "fy": 275},
-        }
-        sec_name = loads["steel_section"]
-        sec = STEEL_SECTIONS[sec_name]
-        Wpl = sec["Wpl_y"]
-        fy = sec["fy"]
-        gamma_m0 = 1.0
-        m_rd = (Wpl * fy) / gamma_m0 / 1e6
-        standard_label = f"Steel {sec_name} (Wpl={Wpl/1e3:.0f} cm³)"
-        code_ref = "EC3 – Plastic Section Resistance"
-        formula_latex = r"M_{pl,Rd} = \frac{W_{pl} \cdot f_y}{\gamma_{M0}}"
-
-    else:   # Timber Eurocode 5
-        f_mk = 24.0
-        k_mod = 0.80
-        gamma_m = 1.3
-        b_timber = 200
-        h_timber = 500
-        W_el = (b_timber * (h_timber ** 2)) / 6
-        m_rd = (k_mod * f_mk / gamma_m * W_el) / 1e6
-        standard_label = f"Timber {b_timber}×{h_timber}mm (GL24h)"
-        code_ref = "EC5 – Solid Timber Bending"
-        formula_latex = r"M_{Rd} = \frac{k_{mod} \cdot f_{m,k}}{\gamma_M} \cdot W"
-
-    # ----- SLS deflection (quasi‑permanent combination) -----
-    psi2 = 0.3 if domain == "Residential" else (0.6 if domain == "Commercial" else 0.8)
-    service_load = g_k + psi2 * q_k
-    w_service = service_load * tributary_width
-    if "Concrete" in material_frame:
-        E = 200000   # N/mm²
-        I = (300 * 450**3) / 12
-    elif "Steel" in material_frame:
-        E = 200000
-        I = 150e6   # approximate for UC section
-    else:
-        E = 11000   # timber
-        I = (200 * 500**3) / 12
-    est_deflection = (5 * w_service * (span * 1000)**4) / (384 * E * I)
-    allowable_deflection = (span * 1000) / 250
-    sls_status = "PASS (Deflection OK)" if est_deflection <= allowable_deflection else "FAIL (Excessive Deflection)"
-
-    # ----- EC7 Foundation (based on actual column load) -----
-    soil = SOIL_PROFILES[soil_type]
-    phi_rad = math.radians(soil["friction_angle"])
-    n_q = (math.tan(math.pi/4 + phi_rad/2)**2) * math.exp(math.pi * math.tan(phi_rad))
-    n_c = (n_q - 1) / math.tan(phi_rad) if soil["friction_angle"] > 0 else 5.14
-    n_gamma = 2 * (n_q + 1) * math.tan(phi_rad)
-
-    b_footing = 1.5  # m (could be sized later)
-    d_footing = 1.2
-    q_ultimate = (1.3 * soil["cohesion"] * n_c +
-                  soil["unit_weight"] * d_footing * n_q +
-                  0.4 * soil["unit_weight"] * b_footing * n_gamma)
-    gamma_rv = 1.4
-    q_rd = q_ultimate / gamma_rv
-
-    tributary_area_per_column = span * span
-    column_load_per_floor = tributary_area_per_column * design_load_kpa
-    total_column_load = column_load_per_floor * floors
-    applied_bearing_pressure = total_column_load / (b_footing ** 2)
-    geo_status = "PASS (Bearing OK)" if q_rd > applied_bearing_pressure else "FAIL (Soil Failure)"
-
-    return {
-        "design_load": f"{design_load_kpa:.2f} kN/m²",
-        "m_ed": f"{m_ed:.1f} kNm",
-        "m_rd": f"{m_rd:.1f} kNm",
-        "label": standard_label,
-        "code_ref": code_ref,
-        "formula_latex": formula_latex,
-        "uls_status": "PASS (Structural OK)" if m_rd > m_ed else "FAIL (Increase Section)",
-        "deflection_limit": f"{allowable_deflection:.1f} mm",
-        "calculated_deflection": f"{est_deflection:.1f} mm",
-        "sls_status": sls_status,
-        "q_rd": f"{q_rd:.1f} kPa",
-        "applied_bearing": f"{applied_bearing_pressure:.1f} kPa",
-        "geo_status": geo_status
-    }
-
-# =========================================================
-# ZONING & BOQ (unchanged)
-# =========================================================
-
-def verify_zoning_laws(footprint, gfa, plot_size, domain):
-    limits = ARCH_DOMAINS[domain]
-    actual_coverage = footprint / plot_size
-    actual_far = gfa / plot_size
-    coverage_pass = actual_coverage <= limits["max_coverage"]
-    far_pass = actual_far <= limits["max_far"]
-    return {
-        "coverage_pct": actual_coverage * 100,
-        "max_coverage_pct": limits["max_coverage"] * 100,
-        "coverage_status": "PASS" if coverage_pass else "VIOLATION (Footprint Too Large)",
-        "far": actual_far,
-        "max_far": limits["max_far"],
-        "far_status": "PASS" if far_pass else "VIOLATION (Exceeds Density Cap)"
-    }
-
-def compute_detailed_forex_boq(d, target_country):
-    gfa = d["total_gfa"]
-    fx_meta = REGIONAL_FX[target_country]
-    fx_rate = fx_meta["rate_to_usd"]
-    currency_symbol = fx_meta["symbol"]
-    regional_multiplier = fx_meta["cost_multiplier"]
-
-    if d["material_frame"] == "Reinforced Concrete (Eurocode 2)":
-        material_multiplier = 1.0
-        frame_desc = "Structural Framing Concrete Matrix (C30)"
-    elif d["material_frame"] == "Structural Steel Profile (Eurocode 3)":
-        material_multiplier = 1.25
-        frame_desc = "Structural Steel Framework Members"
-    else:
-        material_multiplier = 1.15
-        frame_desc = "Premium Structural Engineered Timber Joists"
-
-    combined_multiplier = regional_multiplier * material_multiplier
-
-    conc_qty = int(gfa * 0.35)
-    steel_qty = int(conc_qty * 0.12)
-    brick_qty = int(gfa * 36)
-    finish_qty = int(gfa)
-
-    base_items = [
-        {"Item Description": "Substructure Ground Earth Excavations", "Qty": int(gfa * 0.15), "Unit": "m³", "Rate_USD": 150},
-        {"Item Description": frame_desc, "Qty": conc_qty if "Concrete" in frame_desc else int(conc_qty * 0.4), "Unit": "m³" if "Concrete" in frame_desc else "Tons", "Rate_USD": 210 if "Concrete" in frame_desc else 950},
-        {"Item Description": "Tensile Structural Reinforcement & Fasteners", "Qty": steel_qty, "Unit": "Tons", "Rate_USD": 1200},
-        {"Item Description": "External Perimeter Blockwork Masonry", "Qty": brick_qty, "Unit": "Pcs", "Rate_USD": 2.5},
-        {"Item Description": "Internal Floor Level Finish Screed & Tiling", "Qty": finish_qty, "Unit": "m²", "Rate_USD": 40},
-        {"Item Description": "Timber Internal Opening Door Fitting Units", "Qty": d["doors"], "Unit": "Sets", "Rate_USD": 300},
-        {"Item Description": "Anodized Aluminum Glazed Window Assemblies", "Qty": d["windows"], "Unit": "Sets", "Rate_USD": 450}
+    rooms = [
+        {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#3a3a4a"},
+        {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#4a4a5a"},
     ]
-
-    grand_total_usd = 0
-    calculated_items = []
-    for item in base_items:
-        adjusted_rate_usd = item["Rate_USD"] * combined_multiplier
-        cost_usd = item["Qty"] * adjusted_rate_usd
-        grand_total_usd += cost_usd
-        cost_local = cost_usd * fx_rate
-        calculated_items.append({
-            "Material Asset Item": item["Item Description"],
-            "Quantity Matrix": f"{item['Qty']:,} {item['Unit']}",
-            "Rate (Local Currency)": f"{currency_symbol} {int(adjusted_rate_usd * fx_rate):,}",
-            "Total Local Cost": f"{currency_symbol} {int(cost_local):,}"
-        })
-
-    grand_total_local = grand_total_usd * fx_rate
-    return calculated_items, grand_total_usd, grand_total_local, fx_meta
-
-# =========================================================
-# ENHANCED 2D BLUEPRINT — now uses intelligent layout
-# =========================================================
-
-def draw_2d_blueprint(design):
-    layout = design["layout"]
-    nx = layout["nx"]
-    ny = layout["ny"]
-    span = design["structural"]["span"]
-    grid = layout["grid"]
-
-    canvas_w, canvas_h = 800, 500
-    padding = 60
-    scale_x = (canvas_w - (padding * 2)) / (nx * span)
-    scale_y = (canvas_h - (padding * 2)) / (ny * span)
-    scale = min(scale_x, scale_y)
-
-    rooms_js = ""
-    for row in range(ny):
-        for col in range(nx):
-            cell = grid[row][col]
-            if cell is None:
-                continue
-            room = design["rooms"][cell["room_index"]]
-            rx = padding + (col * span * scale)
-            ry = padding + (row * span * scale)
-            rw = span * scale * 0.95
-            rh = span * scale * 0.95
-            color = cell["color"]
-            rooms_js += f"""
-            ctx.fillStyle = "{color}d0";
-            ctx.fillRect({rx}, {ry}, {rw}, {rh});
-            ctx.strokeStyle = "rgba(0, 229, 255, 0.3)";
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect({rx}, {ry}, {rw}, {rh});
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "600 11px 'Space Grotesk', sans-serif";
-            ctx.fillText("{room['name']}", {rx} + 8, {ry} + 20);
-            ctx.fillStyle = "rgba(255,255,255,0.6)";
-            ctx.font = "10px monospace";
-            ctx.fillText("{room['w']}m x {room['h']}m", {rx} + 8, {ry} + 34);
-            """
-
-    html_content = f"""
-    <div style="background: radial-gradient(circle at 50% 50%, #0a1120, #02040d); padding:24px; border-radius:24px; border:1px solid rgba(0,229,255,0.15); box-shadow: 0 0 40px rgba(56,189,248,0.2);">
-        <canvas id="canvas2d" width="{canvas_w}" height="{canvas_h}" style="max-width:100%; background:#040714; border-radius:12px; box-shadow: inset 0 0 30px rgba(0,0,0,0.8);"></canvas>
-        <script>
-            const canvas = document.getElementById('canvas2d');
-            const ctx = canvas.getContext('2d');
-            const nx = {nx}, ny = {ny}, span = {span}, scale = {scale}, padding = {padding};
-            // Grid lines and column dots
-            ctx.lineWidth = 1;
-            for(let i = 0; i <= nx; i++) {{
-                let x = padding + (i * span * scale);
-                ctx.strokeStyle = "rgba(0, 229, 255, 0.2)";
-                ctx.setLineDash([5, 10]);
-                ctx.beginPath(); ctx.moveTo(x, padding-15); ctx.lineTo(x, padding + (ny*span*scale)+15); ctx.stroke();
-                ctx.fillStyle = "#38bdf8"; ctx.setLineDash([]);
-                ctx.fillText(String.fromCharCode(65+i), x-4, padding-25);
-            }}
-            for(let j = 0; j <= ny; j++) {{
-                let y = padding + (j * span * scale);
-                ctx.strokeStyle = "rgba(0, 229, 255, 0.2)";
-                ctx.setLineDash([5, 10]);
-                ctx.beginPath(); ctx.moveTo(padding-15, y); ctx.lineTo(padding + (nx*span*scale)+15, y); ctx.stroke();
-                ctx.fillStyle = "#38bdf8"; ctx.setLineDash([]);
-                ctx.fillText(j+1, padding-35, y+4);
-            }}
-            {rooms_js}
-            // Column markers
-            ctx.fillStyle = "#ff6b35";
-            const colSize = 10;
-            for(let i=0; i<=nx; i++) {{
-                for(let j=0; j<=ny; j++) {{
-                    let cx = padding + (i*span*scale), cy = padding + (j*span*scale);
-                    ctx.fillRect(cx-colSize/2, cy-colSize/2, colSize, colSize);
-                    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5;
-                    ctx.strokeRect(cx-colSize/2, cy-colSize/2, colSize, colSize);
-                }}
-            }}
-        </script>
-    </div>
-    """
-    st.components.v1.html(html_content, height=560)
-
-# =========================================================
-# 3D ISOMETRIC VIEW — uses layout grid dimensions
-# =========================================================
-
-def draw_3d_isometric_view(design):
-    nx = design["layout"]["nx"]
-    ny = design["layout"]["ny"]
-    span = design["structural"]["span"]
-    floors = design["floors"]
-    canvas_w, canvas_h = 800, 500
-
-    html_content = f"""
-    <div style="background: radial-gradient(circle at 50% 50%, #0a1120, #02040d); padding:24px; border-radius:24px; border:1px solid rgba(0,229,255,0.15); box-shadow: 0 0 40px rgba(56,189,248,0.2);">
-        <canvas id="canvas3d" width="{canvas_w}" height="{canvas_h}" style="max-width:100%; background:#040714; border-radius:12px; box-shadow: inset 0 0 30px rgba(0,0,0,0.8);"></canvas>
-        <script>
-            const canvas = document.getElementById('canvas3d');
-            const ctx = canvas.getContext('2d');
-            const nx = {nx}, ny = {ny}, span = {span}, totalFloors = {floors};
-            const originX = canvas.width/2, originY = canvas.height - 80;
-            const isoScale = Math.min(180 / (nx*span), 180 / (ny*span));
-            const floorHeightPixels = 32;
-            function project(gX, gY, floorIndex) {{
-                const isoX = originX + (gX - gY) * Math.cos(Math.PI/6) * isoScale;
-                const isoY = originY - (gX + gY) * Math.sin(Math.PI/6) * isoScale - (floorIndex * floorHeightPixels);
-                return {{x: isoX, y: isoY}};
-            }}
-            // Background grid
-            ctx.strokeStyle = 'rgba(0, 229, 255, 0.05)';
-            for(let i=0; i<canvas.width; i+=40) {{ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }}
-            for(let j=0; j<canvas.height; j+=40) {{ ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(canvas.width,j); ctx.stroke(); }}
-            // Ground grid
-            ctx.strokeStyle = "rgba(148, 163, 184, 0.2)"; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
-            for(let i=0; i<=nx; i++) {{ let pStart=project(i*span,0,0), pEnd=project(i*span, ny*span,0); ctx.beginPath(); ctx.moveTo(pStart.x,pStart.y); ctx.lineTo(pEnd.x,pEnd.y); ctx.stroke(); }}
-            for(let j=0; j<=ny; j++) {{ let pStart=project(0,j*span,0), pEnd=project(nx*span, j*span,0); ctx.beginPath(); ctx.moveTo(pStart.x,pStart.y); ctx.lineTo(pEnd.x,pEnd.y); ctx.stroke(); }}
-            ctx.setLineDash([]);
-            // Floor slabs & beams
-            for (let f = 1; f <= totalFloors; f++) {{
-                ctx.strokeStyle = "rgba(0, 229, 255, 0.8)"; ctx.lineWidth = 2.2;
-                for(let j=0; j<=ny; j++) {{ for(let i=0; i<nx; i++) {{ let p1=project(i*span, j*span, f), p2=project((i+1)*span, j*span, f); ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }} }}
-                for(let i=0; i<=nx; i++) {{ for(let j=0; j<ny; j++) {{ let p1=project(i*span, j*span, f), p2=project(i*span, (j+1)*span, f); ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }} }}
-                // Columns (orange)
-                ctx.strokeStyle = "rgba(255, 107, 53, 0.9)"; ctx.lineWidth = 3.5;
-                for(let i=0; i<=nx; i++) {{ for(let j=0; j<=ny; j++) {{ let basePt=project(i*span, j*span, f-1), topPt=project(i*span, j*span, f); ctx.beginPath(); ctx.moveTo(basePt.x,basePt.y); ctx.lineTo(topPt.x,topPt.y); ctx.stroke(); }} }}
-                // Node dots
-                ctx.fillStyle = "#ffffff";
-                for(let i=0; i<=nx; i++) {{ for(let j=0; j<=ny; j++) {{ let nodePt=project(i*span, j*span, f); ctx.beginPath(); ctx.arc(nodePt.x, nodePt.y, 2, 0, 2*Math.PI); ctx.fill(); }} }}
-                // Floor label
-                let textPt = project(0, ny*span, f);
-                ctx.fillStyle = "rgba(148, 163, 184, 0.8)"; ctx.font = "9px monospace";
-                ctx.fillText("L" + f, textPt.x - 95, textPt.y + 4);
-            }}
-            // Legend
-            ctx.fillStyle = "rgba(2, 4, 13, 0.85)"; ctx.fillRect(20,20,220,95);
-            ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 1.5; ctx.strokeRect(20,20,220,95);
-            ctx.font = "600 11px 'Space Grotesk', sans-serif"; ctx.fillStyle = "#e0e7ff";
-            ctx.fillText("STRUCTURAL MODEL", 32, 40);
-            ctx.font = "10px monospace";
-            ctx.fillStyle = "#ff6b35"; ctx.fillText("■ Columns", 32, 58);
-            ctx.fillStyle = "#00e5ff"; ctx.fillText("▬ Beams", 32, 74);
-            ctx.fillStyle = "#94a3b8"; ctx.fillText("--- " + nx + "x" + ny + " Bays @" + span + "m", 32, 90);
-        </script>
-    </div>
-    """
-    st.components.v1.html(html_content, height=560)
-
-# =========================================================
-# SIDEBAR — GLASSMORPHIC WORKSPACE (with new load controls)
-# =========================================================
-
-st.sidebar.markdown("""
-<div style="text-align: center; margin-bottom: 20px;">
-    <h1 style="color: #38bdf8; font-size: 2.2rem; margin:0;">ARC STUDIO</h1>
-    <p style="color: #94a3b8; font-family: 'Space Grotesk', sans-serif; letter-spacing: 2px;">OCULUS RIFT v17.0</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.sidebar.markdown("---")
-
-nav_workspace = st.sidebar.pills("🌐 Workspace", ["Control Hub Overview", "Generative Synthesis Lab"], default="Control Hub Overview")
-st.sidebar.markdown("---")
-
-with st.sidebar.expander("⚙️ Configuration Matrix", expanded=True):
-    select_country = st.selectbox("Target Region", list(REGIONAL_FX.keys()))
-    select_domain = st.selectbox("Building Category", list(ARCH_DOMAINS.keys()))
-    select_type = st.selectbox("Typology", ARCH_DOMAINS[select_domain]["types"])
-
-    st.markdown("### Structural Parameters")
-    input_plot = st.slider("Plot Size (m²)", 200, 5000, 800, step=50)
-    input_floors = st.slider("Storeys", 1, 12, 3)
-    input_baths = st.slider("Bathrooms", 1, 10, 2)
-
-    select_soil = st.selectbox("Soil Stratum", list(SOIL_PROFILES.keys()))
-
-    select_material = st.pills(
-        "Framing Matrix",
-        ["Reinforced Concrete (Eurocode 2)", "Structural Steel Profile (Eurocode 3)", "Timber Profile (Eurocode 5)"],
-        default="Reinforced Concrete (Eurocode 2)"
-    )
-
-    st.markdown("### Load Parameters")
-    g_k_input = st.slider("Permanent Load (kN/m²)", 3.0, 8.0, 5.5, step=0.5,
-                          help="Self‑weight + finishes + services.")
-    default_q = 2.5 if select_domain == "Residential" else (4.0 if select_domain == "Commercial" else 7.5)
-    q_k_input = st.slider("Imposed Load (kN/m²)", 1.5, 10.0, default_q, step=0.5,
-                          help="Live load according to occupancy category.")
-
-    if select_material == "Structural Steel Profile (Eurocode 3)":
-        steel_section = st.selectbox(
-            "Steel Section",
-            ["UB 254x146x31", "UB 305x165x40", "UC 254x254x73", "UC 305x305x97"],
-            index=3
-        )
+    if domain == "Residential":
+        rooms += [{"name": "Grand Living Room", "type": "Living Room", "w": rng.uniform(6, 8), "h": rng.uniform(5, 6), "color": "#2a2a3a"},
+                  {"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#1a2a1a"}]
+        for i in range(max(1, int(gfa / rng.randint(60, 90)))):
+            rooms.append({"name": f"Master Suite {i+1}", "type": "Bedroom", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#2a1a3a"})
+    elif domain == "Commercial":
+        rooms += [{"name": "Co-Working Hub Suite", "type": "Office Space", "w": rng.uniform(10, 14), "h": rng.uniform(7, 9), "color": "#1a3a4a"},
+                  {"name": "Executive Dialogue Hall", "type": "Conference", "w": rng.uniform(5, 7), "h": rng.uniform(4, 6), "color": "#2a2a3a"}]
     else:
-        steel_section = None
+        rooms += [{"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
+                  {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"}]
 
-st.sidebar.markdown("---")
-trigger_btn = st.sidebar.button("⚡ Execute Generative Sequence", type="primary", use_container_width=True)
+    for b in range(baths): rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
+    doors = len(rooms) + floors * rng.randint(1, 3)
+    windows = max(4, int(gfa / rng.randint(12, 20)))
+    soil_mult = get_soil_multiplier(soil_name)
+    return {
+        "id": str(uuid.uuid4())[:8].upper(), "domain": domain, "type": btype, "plot_size": plot, "floors": floors,
+        "floor_area": fa, "total_gfa": gfa, "rooms": rooms, "doors": doors, "windows": windows,
+        "country": country, "soil_name": soil_name, "soil_multiplier": soil_mult,
+        "structural": {"columns": int(cols * floors), "beams": int(beams * floors), "span": span}
+    }
 
-# =========================================================
-# CONTROL HUB OVERVIEW — GLOWING FOREX TILES
-# =========================================================
+def run_eurocode_analysis(d, domain):
+    span = d["structural"]["span"]
+    gk = random.uniform(4.5, 6.5)
+    qk = 2.0 if domain == "Residential" else (3.5 if domain == "Commercial" else 7.5)
+    qk *= random.uniform(0.9, 1.1)
+    f_ck, b, d_eff = random.uniform(25, 35), random.uniform(250, 350), random.uniform(400, 500)
+    design_load = 1.35 * gk + 1.50 * qk
+    w_ed = design_load * random.uniform(4.0, 5.0)
+    m_ed = (w_ed * span**2) / 8
+    m_rd = (0.167 * f_ck * b * d_eff**2) / 10**6
+    return {"design_load": f"{design_load:.2f} kN/m²", "m_ed": f"{m_ed:.1f} kNm", "m_rd": f"{m_rd:.1f} kNm",
+            "uls_status": "PASS ✅" if m_rd > m_ed else "FAIL ❌", "f_ck_used": round(f_ck,1), "b_used": round(b), "d_eff_used": round(d_eff)}
 
-if nav_workspace == "Control Hub Overview":
-    st.title("🌍 Regional Structural Telemetry Dashboard")
-    st.markdown("Cross-border East African indices synchronized with active design queues.")
-    st.markdown("---")
+def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.25,0.25)):
+    arch = 40 + min(30, asset['floors']*4) + min(20, len(asset['rooms'])*2.5) + random.randint(-10,10)
+    arch = min(100, arch)
+    try:
+        m_ed = float(ec['m_ed'].split()[0]); m_rd = float(ec['m_rd'].split()[0])
+        struct = 70 + min(30, (m_rd - m_ed) / m_ed * 20)
+    except: struct = 50
+    if ec['uls_status'] != "PASS ✅": struct -= random.randint(20,40)
+    struct = min(100, max(0, int(struct + random.randint(-5,5))))
+    sust = 40 + min(40, int(asset['windows']*2.0)) + random.randint(0,15)
+    if prompt and 'sustain' in prompt.lower(): sust += 10
+    sust = min(100, sust)
+    cost = 50 + (30 if total_usd/asset['total_gfa'] < 400 else (20 if total_usd/asset['total_gfa'] < 600 else 5)) + random.randint(-5,5)
+    cost = min(100, int(cost))
+    w = weights
+    composite = round(arch*w[0] + struct*w[1] + sust*w[2] + cost*w[3])
+    return arch, struct, sust, cost, composite
 
-    fx_1, fx_2, fx_3, fx_4 = st.columns(4)
-    fx_1.metric("Forex Base USD / KES", f"KSh {REGIONAL_FX['Kenya']['rate_to_usd']:.2f}")
-    fx_2.metric("Forex Base USD / UGX", f"USh {REGIONAL_FX['Uganda']['rate_to_usd']:.2f}")
-    fx_3.metric("Forex Base USD / TZS", f"TSh {REGIONAL_FX['Tanzania']['rate_to_usd']:.2f}")
-    fx_4.metric("Forex Base USD / SSP", f"SSP {REGIONAL_FX['South Sudan']['rate_to_usd']:.2f}")
+# ════════════════  FOREX MODULE  ════════════════
+STATIC_FX = {"Kenya":129.49, "Uganda":3665.20, "Tanzania":2625.00, "South Sudan":4626.40, "Rwanda":1330.00, "Ethiopia":125.00}
+BASE_FX = {
+    "Kenya": ("KES","KSh",1.00,"East Africa"), "Uganda": ("UGX","USh",0.95,"East Africa"),
+    "Tanzania": ("TZS","TSh",0.98,"East Africa"), "South Sudan": ("SSP","SSP",1.35,"East Africa"),
+    "Rwanda": ("RWF","FRw",0.85,"Central Africa"), "Ethiopia": ("ETB","Br",0.80,"Horn of Africa")
+}
 
-    st.markdown("---")
+def _fetch_live():
+    try:
+        data = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5).json()["rates"]
+        mapping = {"Kenya":"KES","Uganda":"UGX","Tanzania":"TZS","South Sudan":"SSP","Rwanda":"RWF","Ethiopia":"ETB"}
+        return {c: data[m[c]] for c in mapping if m[c] in data}
+    except: return {}
 
-    stat_c1, stat_c2 = st.columns(2)
-    with stat_c1:
-        st.subheader("📊 Synthesis Pipeline Memory Status")
-        st.metric("Total Cached Archetypes", f"{len(st.session_state.memory['designs'])} Units")
-    with stat_c2:
-        st.subheader("📜 Recent Pipeline Engine Events")
-        if st.session_state.memory["logs"]:
-            for event in reversed(st.session_state.memory["logs"][-4:]):
-                st.caption(f"⏱️ `{event['time'][-11:-3]}` — {event['msg']}")
-        else:
-            st.info("System logs clear. Ready for structural generation sequences.")
+@st.cache_resource
+def init_fx():
+    live = _fetch_live()
+    current_rates = {}
+    baseline_rates = {}
+    currency_info = {}
+    for c, (cur, sym, mult, reg) in BASE_FX.items():
+        rate = live.get(c, STATIC_FX[c])
+        current_rates[c] = rate
+        baseline_rates[c] = rate * random.uniform(0.995, 1.005)
+        currency_info[c] = {"currency": cur, "symbol": sym, "multiplier": mult, "region": reg}
+    return current_rates, baseline_rates, currency_info
 
-# =========================================================
-# GENERATIVE SYNTHESIS LAB — IMMERSIVE EXPERIENCE
-# =========================================================
+_CURRENT_RATES, _BASELINE_RATES, _CURRENCY_INFO = init_fx()
 
-elif nav_workspace == "Generative Synthesis Lab":
-    st.title("📐 Architecture Generation & Material Synthesis Engine")
-    st.markdown("Dynamic layout vectors with Eurocode compliance and regional forex integration.")
-    st.markdown("---")
+def get_fx(country): return _CURRENCY_INFO[country].copy() | {"rate": _CURRENT_RATES[country]}
 
-    if trigger_btn:
-        with st.spinner("Processing architectural synthesis..."):
-            model_data = generate_building_model(
-                select_domain, select_type, input_floors, input_baths, select_country,
-                select_material, input_plot, select_soil,
-                g_k_input, q_k_input, steel_section
-            )
-            st.session_state.active_design = model_data
-            st.session_state.memory["designs"].append(model_data)
-            log_event(f"Generated regional structural array instance #{model_data['id']}")
+def get_all_countries(): return list(STATIC_FX.keys())
 
-    if st.session_state.active_design:
-        design = st.session_state.active_design
+def convert_currency(amount, frm, to):
+    if frm == to: return amount
+    usd = amount if frm == "USD" else amount / _CURRENT_RATES[frm]
+    return usd if to == "USD" else usd * _CURRENT_RATES[to]
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Region", design["country"])
-        m2.metric("GFA", f"{design['total_gfa']:,} m²")
-        m3.metric("Storeys", f"{design['floors']}")
-        m4.metric("Doors / Windows", f"🚪 {design['doors']} | 🪟 {design['windows']}")
+def compute_boq(d, country):
+    gfa = d["total_gfa"]; fx = get_fx(country); soil_m = d.get("soil_multiplier", 1.0)
+    items = [("Substructure Excavation", int(gfa*0.15), 150*soil_m), ("C30 Concrete (m³)", int(gfa*0.35), 210),
+             ("Steel Rebar (kg)", int(gfa*0.35*0.12), 1200), ("Blockwork (units)", int(gfa*38), 2.5),
+             ("Floor Finishes (m²)", int(gfa), 40), ("Doors", d["doors"], 300), ("Windows", d["windows"], 450)]
+    total_usd = sum(q * (u * fx["multiplier"]) for _, q, u in items)
+    total_local = total_usd * fx["rate"]
+    return total_usd, total_local, fx
 
-        st.markdown("<br>", unsafe_allow_html=True)
+# ════════════════  FX HISTORY & FOREST  ════════════════
+@st.cache_data(ttl=3600)
+def fetch_hist(start, end):
+    try:
+        url = f"https://api.exchangerate.host/timeseries?start_date={start}&end_date={end}&base=USD&symbols=KES,UGX,TZS,SSP,RWF,ETB"
+        data = requests.get(url, timeout=10).json()["rates"]
+        df = pd.DataFrame({c: [data[d].get(c) for d in sorted(data)] for c in ["KES","UGX","TZS","SSP","RWF","ETB"]},
+                          index=pd.to_datetime(sorted(data.keys()))).ffill()
+        return df
+    except: return None
 
-        tab_spatial_2d, tab_spatial_3d, tab_eurocode, tab_zoning, tab_financials, tab_timeline = st.tabs([
-            "🗺️ 2D Blueprint", "📦 3D Isometric", "📐 Eurocode Controls",
-            "🏢 Zoning Compliance", "💰 Forex BoQ", "⏳ Schedule"
-        ])
+def plot_hist(df):
+    fig = go.Figure()
+    colors = {"KES":"#888","UGX":"#aaa","TZS":"#666","SSP":"#999","RWF":"#777","ETB":"#555"}
+    for c in df.columns: fig.add_trace(go.Scatter(x=df.index, y=df[c], mode='lines', name=c, line=dict(color=colors.get(c,'#94a3b8'))))
+    fig.update_layout(title="East African FX Rates – 60 days", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa', margin=dict(l=20,r=20,t=40,b=20))
+    return fig
 
-        with tab_spatial_2d:
-            draw_2d_blueprint(design)
+def forest(base, days=7, n_paths=100, vol=0.008):
+    rng = np.random.default_rng(42)
+    p = [rng.normal(0, vol, days) for _ in range(n_paths)]
+    sim_paths = np.cumprod(1 + np.array(p), axis=1) * base
+    fig = go.Figure()
+    x = list(range(1, days+1))
+    band_colors = [
+        (95, "rgba(70, 130, 200, 0.08)"),
+        (80, "rgba(70, 130, 200, 0.15)"),
+        (50, "rgba(70, 130, 200, 0.25)")
+    ]
+    for perc, fill_color in band_colors:
+        lower = np.percentile(sim_paths, (100-perc)/2, axis=0)
+        upper = np.percentile(sim_paths, 100 - (100-perc)/2, axis=0)
+        fig.add_trace(go.Scatter(x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False))
+        fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=fill_color,
+                                 line=dict(width=0), name=f'{perc}% confidence'))
+    median = np.median(sim_paths, axis=0)
+    fig.add_trace(go.Scatter(x=x, y=median, mode='lines+markers', name='Median',
+                             line=dict(color='#7bb8ff', width=2.5),
+                             marker=dict(color='#b0d0ff', size=6)))
+    fig.update_layout(title="Weekly Forecast", plot_bgcolor='rgba(0,0,0,0)',
+                      paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa',
+                      margin=dict(l=20,r=20,t=40,b=20), legend=dict(orientation="h", yanchor="bottom", y=1.02))
+    return fig
 
-        with tab_spatial_3d:
-            draw_3d_isometric_view(design)
+# ════════════════  RAM AI  ════════════════
+WISDOM = {
+    "soil": ["For soft clay, use raft/pile foundations. Black cotton soil expands when wet—add moisture barrier.",
+             "Lateritic soils (Uganda/Rwanda) need erosion protection; strip footings with cover.",
+             "Rock sites: pad foundations, but blasting may add 15‑20% cost."],
+    "foundation": ["Rift Valley seismic zones: continuous reinforcement, avoid soft storeys.",
+                   "Coastal areas (Mombasa, Dar): corrosion‑resistant steel, low w/c ratio."],
+    "cost": ["Cement in landlocked countries can be 30% higher; consider alternative binders.",
+             "Steel is often imported—hedge with pre‑order agreements."],
+    "sustainability": ["Orient long facades to prevailing winds (Indian Ocean monsoon).",
+                       "Rainwater harvesting: first‑flush diverters in semi‑arid regions."],
+    "default": ["Start with site analysis—soil, climate, materials dictate 70% of design.",
+                "Labour affordable but skilled scarce; train and detail simply.",
+                "Allow vertical expansion in rapidly urbanising areas."]
+}
+TIPS = {"Kenya":"Nairobi altitude reduces curing time.", "Uganda":"Termite attack risk on timber.",
+        "Tanzania":"Sulphate‑resistant cement for coral limestone.", "South Sudan":"Compaction/soil replacement needed.",
+        "Rwanda":"Volcanic soil stable; focus on cooling.", "Ethiopia":"Seismic ductile detailing per Eurocode 8."}
 
-        with tab_eurocode:
-            st.markdown("### 📐 Structural Capacity & Deflection Verification")
-            analysis = run_eurocode_analysis(design)
-            st.caption(f"Standard: **{analysis['code_ref']}**")
-            st.latex(analysis["formula_latex"])
+def ram_ai(q, country, domain):
+    q = q.lower()
+    pool = WISDOM.get("soil" if "soil" in q or "ground" in q else
+                      "foundation" if "foundation" in q else
+                      "cost" if "cost" in q or "budget" in q else
+                      "sustainability" if any(w in q for w in ("sustain","green","eco")) else "default")
+    return f"**Ram AI:** {random.choice(pool)}\n\n📌 *{country}*: {TIPS.get(country, '')}"
 
-            ec_c1, ec_c2, ec_c3 = st.columns(3)
-            with ec_c1:
-                st.markdown("#### ULS Bending")
-                st.metric("Load ($w_{Ed}$)", analysis["design_load"])
-                st.metric("Moment ($M_{Ed}$)", analysis["m_ed"])
-                st.metric("Resistance ($M_{Rd}$)", analysis["m_rd"])
-                if "PASS" in analysis["uls_status"]:
-                    st.success(analysis["uls_status"])
-                else:
-                    st.error(analysis["uls_status"])
+# ════════════════  RENDERERS  ════════════════
+def render_floorplan(plan, span=6.0):
+    corridor = next((r for r in plan if r["type"]=="Corridor"), plan[0])
+    stairs = next((r for r in plan if r["type"]=="Stairs"), None)
+    others = [r for r in plan if r not in (corridor, stairs)]
+    unit = "ft" if st.session_state.get("unit_system")=="imperial" else "m"
+    fig = go.Figure()
+    def add_room(x0, y0, x1, y1, color, name, w_m, d_m):
+        w_d, _ = to_display_length(w_m); d_d, _ = to_display_length(d_m)
+        fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor=color, line=dict(color="#555", width=2), opacity=0.7)
+        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=f"<b>{name}</b><br>{w_d}×{d_d} {unit}", showarrow=False, font=dict(size=10, color="#cccccc"), bgcolor="rgba(0,0,0,0.7)")
+    cl, cw = corridor["h"], corridor["w"]
+    max_x = cl + 5; max_y = cw + sum(r["h"] for r in others) + 5
+    for x in np.arange(0, max_x + span, span): fig.add_shape(type="line", x0=x, y0=-max_y, x1=x, y1=max_y, line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
+    for y in np.arange(-max_y, max_y, span): fig.add_shape(type="line", x0=0, y0=y, x1=max_x, y1=y, line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
+    add_room(0, -cw/2, cl, cw/2, corridor["color"], corridor["name"], corridor["w"], corridor["h"])
+    cx, side = 1.5, 1
+    for room in others:
+        rw, rd = room["w"], room["h"]
+        if cx + rw > cl: cx, side = 1.5, -side
+        y0 = cw/2 + 0.5 if side==1 else -cw/2 - 0.5 - rd
+        y1 = y0 + rd
+        add_room(cx, y0, cx + rw, y1, room["color"], room["name"], rw, rd)
+        door_x, door_y = cx + rw/2, cw/2 if side==1 else -cw/2
+        fig.add_shape(type="path", path=f"M {door_x-0.3},{door_y} Q {door_x-0.3},{door_y+(0.6 if side==1 else -0.6)} {door_x+0.3},{door_y+(0.6 if side==1 else -0.6)} Q {door_x+0.3},{door_y} {door_x-0.3},{door_y}", line=dict(color="#888", width=2), fillcolor="rgba(100,100,100,0.2)")
+        fig.add_annotation(x=(door_x), y=(y0+y1)/2, ax=door_x, ay=door_y, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#888")
+        cx += rw + 0.8; side *= -1
+    if stairs:
+        sx = cl + 0.5
+        add_room(sx, -cw/2, sx+stairs["w"], cw/2, stairs["color"], stairs["name"], stairs["w"], stairs["h"])
+        fig.add_annotation(x=sx+stairs["w"]/2, y=0, ax=cl-0.5, ay=0, xref="x", yref="y", axref="x", ayref="y", text="", showarrow=True, arrowhead=3, arrowcolor="#888")
+    fig.add_annotation(x=0.5, y=0, ax=-1, ay=0, xref="x", yref="y", axref="x", ayref="y", text="<b>ENTRANCE</b>", showarrow=True, arrowhead=3, arrowcolor="#888", font=dict(color="#888"))
+    fig.update_layout(title="🗺️ 2D Floor Plan", xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x", scaleratio=1),
+                      plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20,r=20,t=40,b=20), showlegend=False, width=800, height=500)
+    return fig
 
-            with ec_c2:
-                st.markdown("#### SLS Deflection")
-                st.metric("Limit ($L/250$)", analysis["deflection_limit"])
-                st.metric("Deflection", analysis["calculated_deflection"])
-                if "PASS" in analysis["sls_status"]:
-                    st.success(analysis["sls_status"])
-                else:
-                    st.error(analysis["sls_status"])
+def render_3d(plan, floors=1, span=6.0):
+    traces = []
+    min_x = min_y = float('inf'); max_x = max_y = -float('inf')
+    for i, r in enumerate(plan):
+        xc = (i%3)*12; yc = (i//3)*10
+        min_x = min(min_x, xc - r["w"]/2); max_x = max(max_x, xc + r["w"]/2)
+        min_y = min(min_y, yc - r["h"]/2); max_y = max(max_y, yc + r["h"]/2)
+    gs = span*2
+    for x in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
+        traces.append(go.Scatter3d(x=[x,x], y=[min_y, max_y], z=[0,0], mode='lines', line=dict(color='#333', width=1), showlegend=False))
+    for y in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
+        traces.append(go.Scatter3d(x=[min_x, max_x], y=[y,y], z=[0,0], mode='lines', line=dict(color='#333', width=1), showlegend=False))
+    for i, r in enumerate(plan):
+        xc = (i%3)*12; yc = (i//3)*10
+        w, d, c = r["w"], r["h"], r["color"]
+        for f in range(floors):
+            zb = f*3; zt = zb+2.7
+            xb = [xc-w/2, xc+w/2, xc+w/2, xc-w/2, xc-w/2]; yb = [yc-d/2, yc-d/2, yc+d/2, yc+d/2, yc-d/2]
+            traces.append(go.Scatter3d(x=xb, y=yb, z=[zb]*5, mode='lines', line=dict(color=c, width=2), showlegend=False))
+            traces.append(go.Scatter3d(x=xb, y=yb, z=[zt]*5, mode='lines', line=dict(color=c, width=2), showlegend=False))
+            for cx, cy in [(xc-w/2,yc-d/2),(xc+w/2,yc-d/2),(xc+w/2,yc+d/2),(xc-w/2,yc+d/2)]:
+                traces.append(go.Scatter3d(x=[cx,cx], y=[cy,cy], z=[zb,zt], mode='lines', line=dict(color=c, width=2), showlegend=False))
+    for gx in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
+        for gy in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
+            traces.append(go.Scatter3d(x=[gx,gx], y=[gy,gy], z=[0, floors*3], mode='lines', line=dict(color='#555', width=2, dash='dot'), showlegend=False))
+    fig = go.Figure(data=traces)
+    fig.update_layout(scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False), bgcolor='#0a0a0a'),
+                      paper_bgcolor='#0a0a0a', margin=dict(l=0,r=0,b=0,t=20), showlegend=False, title="3D Massing", title_font=dict(color='#aaaaaa', size=14))
+    return fig
 
-            with ec_c3:
-                st.markdown("#### EC7 Foundation")
-                st.caption(f"Soil: `{design['soil_type']}`")
-                st.metric("Bearing ($q_{Rd}$)", analysis["q_rd"])
-                st.metric("Pressure ($q_{Ed}$)", analysis["applied_bearing"])
-                if "PASS" in analysis["geo_status"]:
-                    st.success(analysis["geo_status"])
-                else:
-                    st.error(analysis["geo_status"])
+def render_isometric(plan, span=6.0):
+    w_, h_ = 800, 380; unit = "ft" if st.session_state.get("unit_system")=="imperial" else "m"
+    js = f"ctx.strokeStyle='rgba(100,100,100,0.1)';ctx.lineWidth=1;const step={span*2};for(let x=0;x<{w_};x+=step){{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,{h_});ctx.stroke();}}for(let y=0;y<{h_};y+=step){{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo({w_},y);ctx.stroke();}}"
+    for i, r in enumerate(plan):
+        ox = (i%3)*170+100; oy = (i//3)*110+130
+        rw = min(115, int(r["w"]*14)); rh = min(95, int(r["h"]*14)); c = r["color"]
+        wd, _ = to_display_length(r["w"]); hd, _ = to_display_length(r["h"])
+        js += f"ctx.fillStyle='{c}';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox+rw},{oy-rh/2});ctx.lineTo({ox+rw+rw},{oy});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(200,200,200,0.3)';ctx.stroke();ctx.fillStyle='rgba(200,200,200,0.06)';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox},{oy-40});ctx.lineTo({ox+rw},{oy+rh/2-40});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#ccc';ctx.font='bold 11px Space Grotesk';ctx.fillText('{r["name"]} ({wd}×{hd} {unit})',{ox+15},{oy-2});"
+    return f"<canvas width='{w_}' height='{h_}' style='max-width:100%;background:#0a0a0a;'></canvas><script>const c=document.querySelector('canvas');const ctx=c.getContext('2d');{js}</script>"
 
-        with tab_zoning:
-            st.markdown("### 🏢 Municipal Physical Planning Compliance")
-            zoning = verify_zoning_laws(design["ground_footprint"], design["total_gfa"], design["plot_size"], design["domain"])
-            zc1, zc2 = st.columns(2)
-            with zc1:
-                st.metric("Coverage", f"{zoning['coverage_pct']:.1f}%", f"Max {zoning['max_coverage_pct']:.1f}%")
-                if "PASS" in zoning["coverage_status"]:
-                    st.success(zoning["coverage_status"])
-                else:
-                    st.error(zoning["coverage_status"])
-            with zc2:
-                st.metric("FAR", f"{zoning['far']:.2f}", f"Max {zoning['max_far']:.2f}")
-                if "PASS" in zoning["far_status"]:
-                    st.success(zoning["far_status"])
-                else:
-                    st.error(zoning["far_status"])
+def boq_table(asset):
+    gfa = asset["total_gfa"]; fx = asset["fx"]; sm = asset.get("soil_multiplier", 1.0)
+    items = [("Substructure", int(gfa*0.15), 150*sm), ("C30 Concrete", int(gfa*0.35), 210), ("Steel Rebar", int(gfa*0.35*0.12), 1200),
+             ("Blockwork", int(gfa*38), 2.5), ("Floor Finishes", int(gfa), 40), ("Doors", asset["doors"], 300), ("Windows", asset["windows"], 450)]
+    rows = []
+    for desc, qty, unit_usd in items:
+        adj = unit_usd * fx["multiplier"]
+        rows.append({"Item": desc, "Qty": qty, "Unit USD": f"${adj:,.2f}", "Total USD": f"${qty*adj:,.0f}", f"Total {fx['currency']}": f"{fx['symbol']} {qty*adj*fx['rate']:,.0f}"})
+    return pd.DataFrame(rows)
 
-        with tab_financials:
-            st.markdown("### 📊 Multi-Currency Dynamic Bill of Quantities")
-            boq_table, total_usd, total_local, current_fx = compute_detailed_forex_boq(design, design["country"])
-            st.table(boq_table)
-            b_usd, b_local = st.columns(2)
-            b_usd.metric("Total (USD)", f"$ {int(total_usd):,}")
-            b_local.metric(f"Total ({current_fx['currency']})", f"{current_fx['symbol']} {int(total_local):,}")
-            st.caption(f"Rate: 1 USD = {current_fx['rate_to_usd']} {current_fx['currency']}")
+def describe_concept(asset):
+    gfa_m, gfa_ft = asset['total_gfa'], round(asset['total_gfa']*M2_TO_FT2,1)
+    return f"{asset['type']}, {asset['floors']}‑storey, {len(asset['plan'])} rooms, {asset['country']}. Soil: {asset.get('soil_name','N/A')}. GFA: {gfa_m} m² ({gfa_ft} sq ft)"
 
-            st.markdown("---")
-            st.subheader("⚡ Forward Rate Hedging Sandbox")
-            lock_period = st.select_slider("Lockup Period", options=["3 Months", "6 Months", "12 Months"])
-            months_map = {"3 Months": 3, "6 Months": 6, "12 Months": 12}
-            t_periods = months_map[lock_period]
-            usd_base_yield = 0.045
-            local_yield = usd_base_yield + current_fx["risk_premium"] * 2
-            forward_rate_est = current_fx["rate_to_usd"] * ((1 + local_yield * (t_periods/12)) / (1 + usd_base_yield * (t_periods/12)))
-            hedged_cost_local = total_usd * forward_rate_est
-            variance = hedged_cost_local - total_local
-            fc1, fc2, fc3 = st.columns(3)
-            fc1.metric("Forward Rate", f"{forward_rate_est:.2f} {current_fx['currency']}")
-            fc2.metric("Hedged Liability", f"{current_fx['symbol']} {int(hedged_cost_local):,}")
-            fc3.metric("Premium vs Spot", f"{current_fx['symbol']} {int(variance):+,}", delta_color="inverse")
-            st.caption(f"Risk premium: {current_fx['risk_premium']*100}%")
+def gantt_chart(asset):
+    gfa = asset["total_gfa"]; fl = asset["floors"]; s = datetime.today()
+    tasks = [("Mobilization",5),("Substructure",int(gfa*0.15))] + [(f"Floor {i+1}",20) for i in range(fl)] + [("Roofing",12),("Finishes",int(gfa*0.02)),("Commissioning",14),("Handover",3)]
+    df = pd.DataFrame(tasks, columns=["Task","Duration"])
+    ends = [s]; [ends.append(ends[-1] + timedelta(days=d)) for d in df["Duration"]]
+    df["Start"] = ends[:-1]; df["Finish"] = ends[1:]
+    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", title="📅 Gantt Chart")
+    fig.update_yaxes(autorange="reversed")
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#aaaaaa'))
+    return fig
 
-        with tab_timeline:
-            st.markdown("### ⏳ Chronological Project Lifecycle")
-            t_config_1, t_config_2 = st.columns(2)
-            with t_config_1:
-                base_start = st.date_input("Start Date", value=datetime(2026, 7, 6))
-            with t_config_2:
-                tempo_factor = st.slider("Efficiency Factor", 0.8, 1.5, 1.0, step=0.1)
+# ════════════════  MAIN APP FUNCTION  ════════════════
+def main():
+    # ---- PAGE CONFIG & CUSTOM CSS ----
+    st.set_page_config(page_title="Arc – Sai Engine", page_icon="◈", layout="wide")
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html,body,.stApp{background:#0a0a0a;color:#cccccc;font-family:'Inter',sans-serif}
+    .glass-panel{background:#111111;border:1px solid #333333;border-radius:18px;padding:20px}
+    .stButton>button{background:#333333;color:#ffffff;border:none;border-radius:10px;font-weight:600;padding:8px 20px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
+    .stButton>button:hover{background:#444444;box-shadow:0 4px 12px rgba(0,0,0,0.8)}
+    [data-testid="stSidebar"]{background:#0a0a0a;border-right:1px solid #222}
+    .stTextInput>div>div>input,.stNumberInput input,.stSelectbox>div>div,.stTextArea textarea{background:transparent!important;border:1px solid #333!important;border-radius:8px;color:#cccccc!important}
+    .metric-bar-bg{background:#222;border-radius:5px;height:6px}
+    .metric-bar-fg{border-radius:5px;background:#888;height:6px}
+    .stMetric .stMetricLabel{color:#aaaaaa!important}
+    .stMetric .stMetricValue{color:#cccccc!important}
+    div[data-testid="stMetricDelta"]{color:#aaaaaa!important}
+    </style>
+    """, unsafe_allow_html=True)
 
-            floor_scale = design["floors"]
-            substructure_days = int(12 * tempo_factor)
-            framing_days = int((8 * floor_scale) * tempo_factor)
-            enclosure_days = int((10 * floor_scale) * tempo_factor)
-            finishing_days = int(15 * tempo_factor)
+    # ---- SESSION STATE INIT ----
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in, st.session_state.username, st.session_state.user_data = False, None, None
+        st.session_state.memory = {"designs": [], "concepts": [], "logs": []}
+        st.session_state.generated_concepts, st.session_state.active_design = [], None
+        st.session_state.unit_system, st.session_state.ram_history = "metric", []
+        st.session_state.selected_soil_name = "Nairobi Red Coffee Clay"
 
-            schedule_data = [
-                {"Task": "Substructure & Grading", "Start": 0, "Duration": substructure_days, "Color": "#4b5563"},
-                {"Task": "Core Framing Erection", "Start": substructure_days, "Duration": framing_days, "Color": "#f59e0b"},
-                {"Task": "Envelope & Roofing", "Start": substructure_days + framing_days, "Duration": enclosure_days, "Color": "#10b981"},
-                {"Task": "Interior Finishes", "Start": substructure_days + framing_days + enclosure_days, "Duration": finishing_days, "Color": "#3b82f6"}
-            ]
+    if not load_users(): create_user("admin", "admin123")
 
-            total_days = sum(item["Duration"] for item in schedule_data)
-            project_start_str = base_start.strftime("%b %d, %Y")
-            project_finish_str = (base_start + timedelta(days=total_days)).strftime("%b %d, %Y")
+    # ---- LOGIN PAGE ----
+    if not st.session_state.logged_in:
+        col1, col2, col3 = st.columns([1,2,1])
+        with col2:
+            st.markdown("<div style='text-align:center;font-size:2rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
+            with st.form("auth"):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                c1, c2 = st.columns(2)
+                with c1: login_btn = st.form_submit_button("Login")
+                with c2: reg_btn = st.form_submit_button("Sign up")
+                if login_btn:
+                    user = authenticate(username, password)
+                    if user:
+                        st.session_state.logged_in, st.session_state.username, st.session_state.user_data = True, username, user
+                        st.session_state.memory = load_memory(username)
+                        st.rerun()
+                    else: st.error("Invalid credentials.")
+                if reg_btn:
+                    if not username or not password: st.error("Fill all fields.")
+                    else:
+                        try: create_user(username, password); st.success("Account created! Log in now.")
+                        except ValueError as e: st.error(str(e))
+        st.stop()
 
-            rows_html = ""
-            for item in schedule_data:
-                start_dt = (base_start + timedelta(days=item["Start"])).strftime("%b %d")
-                end_dt = (base_start + timedelta(days=item["Start"] + item["Duration"])).strftime("%b %d")
-                start_pct = (item["Start"] / total_days) * 100 if total_days > 0 else 0
-                width_pct = (item["Duration"] / total_days) * 100 if total_days > 0 else 0
-                rows_html += f"""
-                <div style="margin-bottom: 14px;">
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;">
-                        <span style="font-weight:600; color:#f8fafc;">{item['Task']}</span>
-                        <span style="color:#94a3b8; font-family:'Space Grotesk',monospace; font-size:12px;">{start_dt} → {end_dt} ({item['Duration']}d)</span>
-                    </div>
-                    <div style="background:#0f172a; border-radius:6px; height:14px; width:100%; position:relative; border:1px solid #1e293b; overflow:hidden;">
-                        <div style="position:absolute; left:{start_pct}%; width:{width_pct}%; background:{item['Color']}; height:100%; border-radius:4px; box-shadow: 0 0 10px {item['Color']}80;"></div>
-                    </div>
-                </div>
-                """
+    # ---- USER SESSION ----
+    username = st.session_state.username
+    user = st.session_state.user_data
+    mem = st.session_state.memory
 
-            timeline_html = f"""
-            <div style="background:rgba(2,4,13,0.9); padding:24px; border-radius:24px; border:1px solid rgba(0,229,255,0.2); backdrop-filter:blur(10px);">
-                <div style="display:flex; justify-content:space-between; margin-bottom:24px; font-size:12px; color:#94a3b8; border-bottom:1px dashed #334155; padding-bottom:12px; font-family:'Space Grotesk',sans-serif;">
-                    <div>📅 <strong>INITIATION:</strong> {project_start_str}</div>
-                    <div>⏱️ <strong>TOTAL LIFECYCLE:</strong> {total_days} Days</div>
-                    <div>🏁 <strong>COMPLETION:</strong> {project_finish_str}</div>
-                </div>
-                {rows_html}
-            </div>
-            """
-            st.components.v1.html(timeline_html, height=300)
+    # ---- SIDEBAR ----
+    with st.sidebar:
+        st.markdown("<div style='text-align:center;font-size:1.4rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:#888;'>{username} · Lvl {user['level']}</div>", unsafe_allow_html=True)
+        lvl, xp = user["level"], user["xp"]; needed = xp_for_level(lvl); prog = xp/needed if needed else 1
+        st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:10px 0'><span style='font-size:10px;color:#888;'>LVL {lvl}</span><div style='flex:1;height:5px;background:#222;border-radius:2px'><div style='width:{prog*100}%;height:100%;background:#888;border-radius:2px'></div></div><span style='font-size:9px;color:#666;'>{xp}/{needed} XP</span></div>", unsafe_allow_html=True)
+        unit = st.selectbox("📏 Unit System", ["Metric (m, m²)", "Imperial (ft, sq ft)"])
+        st.session_state.unit_system = "metric" if "Metric" in unit else "imperial"
+        nav = st.radio("Navigate", ["Dashboard", "Concepts", "Ram AI"])
+        st.markdown("---")
 
-    else:
-        st.info("💡 Adjust structural properties in the sidebar and execute the synthesis run.")
+        with st.expander("📐 Arc Configuration", expanded=True):
+            st.markdown("**Trade Region · East African Countries**")
+            country = st.selectbox("Country", list(STATIC_FX.keys()))
+            domain = st.selectbox("Domain", list(ARCH_DOMAINS.keys()))
+            typology = st.selectbox("Typology", ARCH_DOMAINS[domain])
+            plot = st.slider("Plot Area (m²)", 200, 5000, 800, step=50)
+            if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
+            floors = st.slider("Floors", 1, 12, 3)
+            baths = st.slider("Bathrooms", 1, 10, 2)
+
+            # Enhanced soil selection
+            soil_options = REGION_SOIL_OPTIONS.get(country, [("Generic Firm Sandy Gravel", "medium")])
+            soil_names = [opt[0] for opt in soil_options]
+            default_idx = 0
+            prev_soil = st.session_state.selected_soil_name
+            if prev_soil in soil_names:
+                default_idx = soil_names.index(prev_soil)
+            selected_soil = st.selectbox("🌱 Soil Condition", soil_names, index=default_idx,
+                                         format_func=lambda x: f"{x} ({get_soil_category(x)}, {get_soil_multiplier(x)}x)")
+            st.session_state.selected_soil_name = selected_soil
+
+        with st.expander("⚖️ AI Weights", expanded=False):
+            w_arch = st.slider("Architecture", 0.0, 1.0, 0.25, 0.05)
+            w_struct = st.slider("Structural", 0.0, 1.0, 0.25, 0.05)
+            w_sust = st.slider("Sustainability", 0.0, 1.0, 0.25, 0.05)
+            w_cost = st.slider("Cost", 0.0, 1.0, 0.25, 0.05)
+            total_w = w_arch+w_struct+w_sust+w_cost
+            if total_w>0: w_arch/=total_w; w_struct/=total_w; w_sust/=total_w; w_cost/=total_w
+            weights = (w_arch, w_struct, w_sust, w_cost)
+            st.caption(f"Norm: arch {w_arch:.2f} struct {w_struct:.2f} sust {w_sust:.2f} cost {w_cost:.2f}")
+
+        if st.button("✨ Generate Concepts", use_container_width=True):
+            with st.spinner("Synthesizing 5 concepts..."):
+                concepts = []
+                soil_name = st.session_state.selected_soil_name
+                for i in range(5):
+                    d = generate_spatial_model(domain, typology, plot+random.randint(-400,400),
+                                               max(1, floors+random.randint(-2,2)), max(1, baths+random.randint(-2,2)),
+                                               country, soil_name, seed=i)
+                    d["plan"] = d["rooms"]
+                    ec = run_eurocode_analysis(d, domain)
+                    d["eurocode"] = ec
+                    total_usd, total_local, fx = compute_boq(d, country)
+                    arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "", weights)
+                    d["scores"] = {"arch":arch,"struct":struct,"sust":sust,"cost":cost,"composite":comp}
+                    d["total_usd"], d["total_local"], d["fx"] = total_usd, total_local, fx
+                    concepts.append(d)
+                concepts.sort(key=lambda x: x["scores"]["composite"], reverse=True)
+                st.session_state.generated_concepts = concepts
+                st.session_state.active_design = concepts[0]
+                log_event(username, mem, f"Generated 5 concepts. Alpha: {concepts[0]['id']}")
+                leveled_up = add_xp(username, 20)
+                st.session_state.user_data = get_user(username)
+                if leveled_up: st.balloons()
+                st.rerun()
+
+        with st.expander("💱 Forex Converter", expanded=False):
+            if st.button("🔄 Refresh Rates", use_container_width=True): init_fx.clear(); init_fx(); st.rerun()
+            curr_list = ["USD"] + list(STATIC_FX.keys())
+            from_cur = st.selectbox("From", curr_list, key="conv_from")
+            to_cur = st.selectbox("To", curr_list, key="conv_to")
+            amount = st.number_input("Amount", value=1000.0, step=100.0)
+            res = convert_currency(amount, from_cur, to_cur)
+            sym_from = "$" if from_cur=="USD" else get_fx(from_cur)["symbol"]
+            sym_to = "$" if to_cur=="USD" else get_fx(to_cur)["symbol"]
+            st.metric(f"{sym_from} {amount:,.2f}", f"{sym_to} {res:,.2f}")
+
+        if st.button("🚪 Logout", use_container_width=True): save_memory(username, mem); st.session_state.logged_in = False; st.rerun()
+
+    # ---- MAIN CONTENT ----
+    if nav == "Dashboard":
+        st.markdown("<div class='glass-panel' style='text-align:center;margin-bottom:24px;'><h2 style='margin:0;color:#aaaaaa;'>Welcome back, Architect 👋</h2><p style='color:#888;'>Create. Evolve. Perfect.</p></div>", unsafe_allow_html=True)
+        st.markdown("### 💹 Live East African FX Rates")
+        cols = st.columns(6)
+        for i, c in enumerate(get_all_countries()):
+            data = get_fx(c); rate = data["rate"]; base = _BASELINE_RATES[c]
+            change = ((rate - base) / base) * 100
+            color = "#888" if change>=0 else "#555"
+            with cols[i]:
+                st.markdown(f"<div class='glass-panel' style='padding:12px 4px;text-align:center;'><div style='font-size:0.75rem;color:#888;'>{c}</div><div style='font-size:1.3rem;font-weight:600;color:#ccc;'>{data['symbol']} {rate:.2f}</div><div style='font-size:0.7rem;color:{color};'>{'+' if change>=0 else ''}{change:.2f}%</div></div>", unsafe_allow_html=True)
+        st.markdown("---")
+        with st.expander("📈 East African FX History (60 days)", expanded=True):
+            end_date = datetime.today(); start_date = end_date - timedelta(days=60)
+            df_hist = fetch_hist(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+            if df_hist is not None and not df_hist.empty:
+                st.plotly_chart(plot_hist(df_hist), use_container_width=True)
+            else:
+                st.info("Live data unavailable – showing simulated trends.")
+                base_rates = {c: _CURRENT_RATES[c] for c in get_all_countries()}
+                sim = {}
+                dates = [start_date + timedelta(days=i) for i in range(61)]
+                for c, r in base_rates.items():
+                    rng = np.random.default_rng(42)
+                    steps = rng.normal(0, 0.005, len(dates)-1)
+                    vals = [r]
+                    for s in steps:
+                        vals.append(vals[-1] * (1 + s))
+                    sim[c] = vals[1:]
+                df_sim = pd.DataFrame(sim, index=dates[1:])
+                st.plotly_chart(plot_hist(df_sim), use_container_width=True)
+        st.markdown("---")
+        st.markdown("### 🌳 Forex Forest – Weekly Forecast")
+        st.caption("Monte Carlo simulation of possible rate paths over the next 7 days")
+        fc = st.selectbox("Country", get_all_countries(), key="forest")
+        fig_forest = forest(_CURRENT_RATES[fc])
+        st.plotly_chart(fig_forest, use_container_width=True)
+        st.markdown("---")
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Blueprints", len(mem["designs"]), delta="+1")
+        c2.metric("Concepts", len(mem["designs"])*5, delta="Evolving")
+        c3.metric("Logs", len(mem["logs"]))
+
+    elif nav == "Concepts":
+        if st.session_state.generated_concepts:
+            concepts = st.session_state.generated_concepts
+            st.markdown("## 🔬 Evolution Engine Results")
+            st.caption("5 unique design concepts evaluated by Sai AI Agents")
+            names = ["Alpha","Beta","Gamma","Delta","Epsilon"]
+            colors = ["#888","#999","#777","#666","#555"]
+            tabs = st.tabs(names[:len(concepts)])
+            for idx, (tab, c) in enumerate(zip(tabs, concepts)):
+                with tab:
+                    sc = c["scores"]; ec = c["eurocode"]
+                    st.markdown(f"**Design brief:** {describe_concept(c)}")
+                    col1, col2 = st.columns([3,2])
+                    with col1:
+                        st.markdown("### 🗺️ 2D Floor Plan")
+                        st.plotly_chart(render_floorplan(c["plan"], c["structural"]["span"]), use_container_width=True, key=f"fp_{idx}")
+                        st.caption(f"Floor Area: {c['floor_area']} m² | {c['floors']} floors | {c['country']}")
+                        with st.expander("🧱 Material Breakdown"): st.dataframe(boq_table(c), use_container_width=True)
+                    with col2:
+                        for lbl, key, col in [("🏛️ Architect AI","arch","#888"),("⚙️ Structural AI","struct","#aaa"),("🌱 Sustainability AI","sust","#777"),("💰 Cost AI","cost","#999")]:
+                            st.markdown(f"<div style='margin-bottom:6px;'><div style='display:flex;align-items:center;font-size:12px;color:#888'>{lbl} {sc[key]}%</div><div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div></div>", unsafe_allow_html=True)
+                        st.metric("USD Total", f"${c['total_usd']:,.0f}")
+                        st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
+                        st.markdown("### 📦 3D Massing")
+                        view = st.radio("View", ["Isometric","Interactive"], horizontal=True, key=f"3d_{idx}")
+                        if view == "Isometric": st.components.v1.html(render_isometric(c["plan"], c["structural"]["span"]), height=400)
+                        else: st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"3d_{idx}")
+            with st.expander("📊 AI Score Radar", expanded=False):
+                radar_df = pd.DataFrame([{"Concept":f"{names[i]} ({c['type']})", "Architecture":c["scores"]["arch"], "Structural":c["scores"]["struct"], "Sustainability":c["scores"]["sust"], "Cost Efficiency":c["scores"]["cost"]} for i,c in enumerate(concepts)])
+                cats = list(radar_df.columns[1:])
+                fig_radar = go.Figure()
+                for i, row in radar_df.iterrows(): fig_radar.add_trace(go.Scatterpolar(r=row[cats].values, theta=cats, fill='toself', name=row["Concept"], line_color=colors[i]))
+                fig_radar.update_layout(polar=dict(radialaxis=dict(range=[0,100])), paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa')
+                st.plotly_chart(fig_radar, use_container_width=True)
+            asset = concepts[0]
+            st.markdown("---"); st.markdown("### 🏆 TOP RECOMMENDATION: CONCEPT ALPHA")
+            col_save, col_export = st.columns(2)
+            if col_save.button("💾 Save to Library"):
+                mem["designs"].append({"id":asset["id"],"type":asset["type"],"country":asset["country"],"soil":asset.get("soil_name",""),"total_gfa":asset["total_gfa"],"scores":asset["scores"],"plan":asset["plan"],"timestamp":datetime.now().isoformat()})
+                save_memory(username, mem); st.success("Design saved!")
+            with col_export:
+                exp = pd.DataFrame([{"ID":c["id"],"Type":c["type"],"Country":c["country"],"Soil":c.get("soil_name",""),"GFA":c["total_gfa"],"Floors":c["floors"],"Rooms":len(c["plan"]),"Cost USD":c["total_usd"],"Cost Local":c["total_local"],"Arch%":c["scores"]["arch"],"Struct%":c["scores"]["struct"],"Sust%":c["scores"]["sust"],"CostEff%":c["scores"]["cost"],"Composite":c["scores"]["composite"]} for c in concepts])
+                st.download_button("📥 Export CSV", exp.to_csv(index=False).encode(), file_name="arc_concepts.csv", mime="text/csv")
+            with st.expander("📅 Construction Gantt Chart"): st.plotly_chart(gantt_chart(asset), use_container_width=True)
+        else: st.info("No designs generated yet. Configure parameters in sidebar and click **Generate Concepts**.")
+
+    elif nav == "Ram AI":
+        st.markdown("## 🧠 Ram AI – Infinite Architectural Intelligence")
+        st.markdown("Ask Ram anything about construction, soil, costs, or design in East Africa.")
+        with st.form("ram_form"):
+            q = st.text_input("Your question:", placeholder="Ask Ram about soil, foundations, costs...")
+            submitted = st.form_submit_button("Ask Ram AI")
+        if submitted and q:
+            with st.spinner("Ram is thinking..."):
+                resp = ram_ai(q, country, domain)
+                st.session_state.ram_history.append(("You", q))
+                st.session_state.ram_history.append(("Ram", resp))
+        for speaker, msg in st.session_state.ram_history:
+            if speaker == "You": st.markdown(f"**👤 {speaker}:** {msg}")
+            else: st.markdown(f'**🧠 {speaker}:** {msg}')
+
+    st.markdown("<div style='text-align:center;padding:20px 0;color:#444'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
+
+# ---- ENTRY POINT ----
+if __name__ == "__main__":
+    main()
