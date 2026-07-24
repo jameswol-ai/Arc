@@ -1,4 +1,10 @@
-# =========================================================
+# 
+# app.py
+from streamlit_app import main
+if __name__ == "__main__":
+    main()
+
+=========================================================
 # ARC — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # Multi-Story Floor Plan, Eurocode Selector & Zoning Engine
 # Zero-Dependency Single-File Streamlit Implementation (v17 — Dynamic Structural & Intelligent Layout)
