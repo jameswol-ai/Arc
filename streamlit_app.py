@@ -1,6 +1,7 @@
 # =========================================================
 # Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
 # streamlit_app.py – Black & Grey Theme, No Logos/Images
+# Improved Soil Selection & Error Fixes
 # =========================================================
 
 import streamlit as st
@@ -84,16 +85,36 @@ def log_event(username, mem, msg):
     mem["logs"].append({"time": datetime.now().isoformat(), "msg": msg})
     save_memory(username, mem)
 
-# ════════════════  REGION SOILS (Nairobi, Kampala, Juba highlighted)  ════════════════
-REGION_SOIL_MAP = {
-    "Kenya":       ("Nairobi Red Coffee Clay / Volcanic Loam", "medium"),
-    "Uganda":      ("Kampala Red Lateritic Clay / Wetland Silts", "soft"),
-    "Tanzania":    ("Dar es Salaam Coastal Sands & Coral Limestone", "medium"),
-    "South Sudan": ("Juba Black Cotton Soil (Expansive Clay)", "soft"),
-    "Rwanda":      ("Kigali Volcanic Soils (Andosols)", "rock"),
-    "Ethiopia":    ("Addis Ababa Clayey Soils & Volcanic Tuff", "soft"),
+# ════════════════  ENHANCED SOIL SYSTEM  ════════════════
+# Common East African soil types with multipliers
+SOIL_TYPES = {
+    "Nairobi Red Coffee Clay":             {"multiplier": 1.0,  "cat": "Medium", "region": "Kenya"},
+    "Kampala Red Lateritic Clay":          {"multiplier": 1.6,  "cat": "Soft",   "region": "Uganda"},
+    "Wetland Silts (Kampala)":             {"multiplier": 1.7,  "cat": "Very Soft","region": "Uganda"},
+    "Dar Coastal Sand / Coral Limestone":  {"multiplier": 0.85, "cat": "Rock",   "region": "Tanzania"},
+    "Juba Black Cotton Soil (Expansive)":  {"multiplier": 1.8,  "cat": "Very Soft","region": "South Sudan"},
+    "Kigali Volcanic Andosols":            {"multiplier": 0.7,  "cat": "Rock",   "region": "Rwanda"},
+    "Addis Clayey Soils & Volcanic Tuff":  {"multiplier": 1.5,  "cat": "Soft",   "region": "Ethiopia"},
+    "Generic Firm Sandy Gravel":           {"multiplier": 1.0,  "cat": "Medium", "region": "All"},
+    "Generic Soft Silt / Clay":            {"multiplier": 1.5,  "cat": "Soft",   "region": "All"},
+    "Generic Hard Rock / Laterite":        {"multiplier": 0.7,  "cat": "Rock",   "region": "All"},
 }
-SOIL_MULTIPLIERS = {"soft": 1.6, "medium": 1.0, "rock": 0.7}
+
+# Country → list of (soil_name, desc) for the dropdown
+REGION_SOIL_OPTIONS = {
+    "Kenya":       [("Nairobi Red Coffee Clay", "medium"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft"), ("Generic Hard Rock / Laterite", "rock")],
+    "Uganda":      [("Kampala Red Lateritic Clay", "soft"), ("Wetland Silts (Kampala)", "very soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+    "Tanzania":    [("Dar Coastal Sand / Coral Limestone", "rock"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft")],
+    "South Sudan": [("Juba Black Cotton Soil (Expansive)", "very soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+    "Rwanda":      [("Kigali Volcanic Andosols", "rock"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Soft Silt / Clay", "soft")],
+    "Ethiopia":    [("Addis Clayey Soils & Volcanic Tuff", "soft"), ("Generic Firm Sandy Gravel", "medium"), ("Generic Hard Rock / Laterite", "rock")],
+}
+
+def get_soil_multiplier(soil_name):
+    return SOIL_TYPES.get(soil_name, {"multiplier": 1.0})["multiplier"]
+
+def get_soil_category(soil_name):
+    return SOIL_TYPES.get(soil_name, {"cat": "Medium"})["cat"]
 
 # ════════════════  SAI ENGINE  ════════════════
 ARCH_DOMAINS = {
@@ -102,7 +123,7 @@ ARCH_DOMAINS = {
     "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
 }
 
-def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_cat, seed=0):
+def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, seed=0):
     rng = random.Random(seed)
     plot = max(200, plot_size + rng.randint(-300, 300))
     max_fp = int(plot * rng.uniform(0.5, 0.75))
@@ -133,10 +154,11 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     for b in range(baths): rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
     doors = len(rooms) + floors * rng.randint(1, 3)
     windows = max(4, int(gfa / rng.randint(12, 20)))
+    soil_mult = get_soil_multiplier(soil_name)
     return {
         "id": str(uuid.uuid4())[:8].upper(), "domain": domain, "type": btype, "plot_size": plot, "floors": floors,
         "floor_area": fa, "total_gfa": gfa, "rooms": rooms, "doors": doors, "windows": windows,
-        "country": country, "soil_category": soil_cat,
+        "country": country, "soil_name": soil_name, "soil_multiplier": soil_mult,
         "structural": {"columns": int(cols * floors), "beams": int(beams * floors), "span": span}
     }
 
@@ -199,13 +221,11 @@ def init_fx():
         currency_info[c] = {"currency": cur, "symbol": sym, "multiplier": mult, "region": reg}
     return current_rates, baseline_rates, currency_info
 
-# Every rerun reassigns the globals with cached (or freshly generated) data
 _CURRENT_RATES, _BASELINE_RATES, _CURRENCY_INFO = init_fx()
 
 def get_fx(country): return _CURRENCY_INFO[country].copy() | {"rate": _CURRENT_RATES[country]}
 
-def get_all_countries():
-    return list(STATIC_FX.keys())
+def get_all_countries(): return list(STATIC_FX.keys())
 
 def convert_currency(amount, frm, to):
     if frm == to: return amount
@@ -213,7 +233,7 @@ def convert_currency(amount, frm, to):
     return usd if to == "USD" else usd * _CURRENT_RATES[to]
 
 def compute_boq(d, country):
-    gfa = d["total_gfa"]; fx = get_fx(country); soil_m = SOIL_MULTIPLIERS.get(d.get("soil_category","medium"), 1.0)
+    gfa = d["total_gfa"]; fx = get_fx(country); soil_m = d.get("soil_multiplier", 1.0)
     items = [("Substructure Excavation", int(gfa*0.15), 150*soil_m), ("C30 Concrete (m³)", int(gfa*0.35), 210),
              ("Steel Rebar (kg)", int(gfa*0.35*0.12), 1200), ("Blockwork (units)", int(gfa*38), 2.5),
              ("Floor Finishes (m²)", int(gfa), 40), ("Doors", d["doors"], 300), ("Windows", d["windows"], 450)]
@@ -239,25 +259,24 @@ def plot_hist(df):
     fig.update_layout(title="East African FX Rates – 60 days", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa', margin=dict(l=20,r=20,t=40,b=20))
     return fig
 
-def forest(base, days=7, paths=100, vol=0.008):
+def forest(base, days=7, n_paths=100, vol=0.008):
     rng = np.random.default_rng(42)
-    p = [rng.normal(0, vol, days) for _ in range(paths)]
-    paths = np.cumprod(1 + np.array(p), axis=1) * base
+    p = [rng.normal(0, vol, days) for _ in range(n_paths)]
+    sim_paths = np.cumprod(1 + np.array(p), axis=1) * base
     fig = go.Figure()
     x = list(range(1, days+1))
-    # Beautiful blue gradient bands
     band_colors = [
         (95, "rgba(70, 130, 200, 0.08)"),
         (80, "rgba(70, 130, 200, 0.15)"),
         (50, "rgba(70, 130, 200, 0.25)")
     ]
     for perc, fill_color in band_colors:
-        lower = np.percentile(paths, (100-perc)/2, axis=0)
-        upper = np.percentile(paths, 100 - (100-perc)/2, axis=0)   # ← FIXED LINE
+        lower = np.percentile(sim_paths, (100-perc)/2, axis=0)
+        upper = np.percentile(sim_paths, 100 - (100-perc)/2, axis=0)
         fig.add_trace(go.Scatter(x=x, y=upper, mode='lines', line=dict(width=0), showlegend=False))
         fig.add_trace(go.Scatter(x=x, y=lower, mode='lines', fill='tonexty', fillcolor=fill_color,
                                  line=dict(width=0), name=f'{perc}% confidence'))
-    median = np.median(paths, axis=0)
+    median = np.median(sim_paths, axis=0)
     fig.add_trace(go.Scatter(x=x, y=median, mode='lines+markers', name='Median',
                              line=dict(color='#7bb8ff', width=2.5),
                              marker=dict(color='#b0d0ff', size=6)))
@@ -370,7 +389,7 @@ def render_isometric(plan, span=6.0):
     return f"<canvas width='{w_}' height='{h_}' style='max-width:100%;background:#0a0a0a;'></canvas><script>const c=document.querySelector('canvas');const ctx=c.getContext('2d');{js}</script>"
 
 def boq_table(asset):
-    gfa = asset["total_gfa"]; fx = asset["fx"]; sm = SOIL_MULTIPLIERS.get(asset.get("soil_category","medium"), 1.0)
+    gfa = asset["total_gfa"]; fx = asset["fx"]; sm = asset.get("soil_multiplier", 1.0)
     items = [("Substructure", int(gfa*0.15), 150*sm), ("C30 Concrete", int(gfa*0.35), 210), ("Steel Rebar", int(gfa*0.35*0.12), 1200),
              ("Blockwork", int(gfa*38), 2.5), ("Floor Finishes", int(gfa), 40), ("Doors", asset["doors"], 300), ("Windows", asset["windows"], 450)]
     rows = []
@@ -381,7 +400,7 @@ def boq_table(asset):
 
 def describe_concept(asset):
     gfa_m, gfa_ft = asset['total_gfa'], round(asset['total_gfa']*M2_TO_FT2,1)
-    return f"{asset['type']}, {asset['floors']}‑storey, {len(asset['plan'])} rooms, {asset['country']}. GFA: {gfa_m} m² ({gfa_ft} sq ft)"
+    return f"{asset['type']}, {asset['floors']}‑storey, {len(asset['plan'])} rooms, {asset['country']}. Soil: {asset.get('soil_name','N/A')}. GFA: {gfa_m} m² ({gfa_ft} sq ft)"
 
 def gantt_chart(asset):
     gfa = asset["total_gfa"]; fl = asset["floors"]; s = datetime.today()
@@ -419,10 +438,11 @@ if "logged_in" not in st.session_state:
     st.session_state.memory = {"designs": [], "concepts": [], "logs": []}
     st.session_state.generated_concepts, st.session_state.active_design = [], None
     st.session_state.unit_system, st.session_state.ram_history = "metric", []
+    st.session_state.selected_soil_name = "Nairobi Red Coffee Clay"   # default
 
 if not load_users(): create_user("admin", "admin123")
 
-# ════════════════  LOGIN – No logo  ════════════════
+# ════════════════  LOGIN  ════════════════
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
@@ -469,12 +489,18 @@ with st.sidebar:
         if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
-        # East African soil selection
-        desc, def_cat = REGION_SOIL_MAP.get(country, ("Unknown", "medium"))
-        cat_opts = ["soft", "medium", "rock"]
-        labels = {"soft":"Soft Clay/Silt", "medium":"Medium Sand/Gravel", "rock":"Rock/Laterite"}
-        soil_choice = st.selectbox("🌱 Soil Condition", [f"{labels[c]} (e.g., {desc})" for c in cat_opts], index=cat_opts.index(def_cat))
-        soil_cat = cat_opts[[f"{labels[c]} (e.g., {desc})" for c in cat_opts].index(soil_choice)]
+
+        # Enhanced soil selection
+        soil_options = REGION_SOIL_OPTIONS.get(country, [("Generic Firm Sandy Gravel", "medium")])
+        soil_names = [opt[0] for opt in soil_options]
+        default_idx = 0   # first in list
+        # persist selection across reruns
+        prev_soil = st.session_state.selected_soil_name
+        if prev_soil in soil_names:
+            default_idx = soil_names.index(prev_soil)
+        selected_soil = st.selectbox("🌱 Soil Condition", soil_names, index=default_idx,
+                                      format_func=lambda x: f"{x} ({get_soil_category(x)}, {get_soil_multiplier(x)}x)")
+        st.session_state.selected_soil_name = selected_soil
 
     with st.expander("⚖️ AI Weights", expanded=False):
         w_arch = st.slider("Architecture", 0.0, 1.0, 0.25, 0.05)
@@ -489,10 +515,11 @@ with st.sidebar:
     if st.button("✨ Generate Concepts", use_container_width=True):
         with st.spinner("Synthesizing 5 concepts..."):
             concepts = []
+            soil_name = st.session_state.selected_soil_name
             for i in range(5):
                 d = generate_spatial_model(domain, typology, plot+random.randint(-400,400),
                                            max(1, floors+random.randint(-2,2)), max(1, baths+random.randint(-2,2)),
-                                           country, soil_cat, seed=i)
+                                           country, soil_name, seed=i)
                 d["plan"] = d["rooms"]
                 ec = run_eurocode_analysis(d, domain)
                 d["eurocode"] = ec
@@ -604,10 +631,10 @@ elif nav == "Concepts":
         st.markdown("---"); st.markdown("### 🏆 TOP RECOMMENDATION: CONCEPT ALPHA")
         col_save, col_export = st.columns(2)
         if col_save.button("💾 Save to Library"):
-            mem["designs"].append({"id":asset["id"],"type":asset["type"],"country":asset["country"],"total_gfa":asset["total_gfa"],"scores":asset["scores"],"plan":asset["plan"],"timestamp":datetime.now().isoformat()})
+            mem["designs"].append({"id":asset["id"],"type":asset["type"],"country":asset["country"],"soil":asset.get("soil_name",""),"total_gfa":asset["total_gfa"],"scores":asset["scores"],"plan":asset["plan"],"timestamp":datetime.now().isoformat()})
             save_memory(username, mem); st.success("Design saved!")
         with col_export:
-            exp = pd.DataFrame([{"ID":c["id"],"Type":c["type"],"Country":c["country"],"Soil":c.get("soil_category","medium"),"GFA":c["total_gfa"],"Floors":c["floors"],"Rooms":len(c["plan"]),"Cost USD":c["total_usd"],"Cost Local":c["total_local"],"Arch%":c["scores"]["arch"],"Struct%":c["scores"]["struct"],"Sust%":c["scores"]["sust"],"CostEff%":c["scores"]["cost"],"Composite":c["scores"]["composite"]} for c in concepts])
+            exp = pd.DataFrame([{"ID":c["id"],"Type":c["type"],"Country":c["country"],"Soil":c.get("soil_name",""),"GFA":c["total_gfa"],"Floors":c["floors"],"Rooms":len(c["plan"]),"Cost USD":c["total_usd"],"Cost Local":c["total_local"],"Arch%":c["scores"]["arch"],"Struct%":c["scores"]["struct"],"Sust%":c["scores"]["sust"],"CostEff%":c["scores"]["cost"],"Composite":c["scores"]["composite"]} for c in concepts])
             st.download_button("📥 Export CSV", exp.to_csv(index=False).encode(), file_name="arc_concepts.csv", mime="text/csv")
         with st.expander("📅 Construction Gantt Chart"): st.plotly_chart(gantt_chart(asset), use_container_width=True)
     else: st.info("No designs generated yet. Configure parameters in sidebar and click **Generate Concepts**.")
