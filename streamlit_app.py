@@ -4,7 +4,21 @@
 # Improved Soil Selection & Error Fixes
 # =========================================================
 
-import streamlit as st
+# streamlit_app.py
+# ... keep all imports and helper functions at the top (unchanged) ...
+
+# =========================================================
+# NEW: wrap everything from the UI section onward in main()
+# =========================================================
+def main():
+    import streamlit as st
+    # ... your whole existing UI code (st.set_page_config, login, sidebar, navigation) ...
+    # (everything after the UI CSS and session state initialization)
+
+    # At the very end, if the script is run directly, call main()
+    # (do not remove the __name__ guard so it still works locally)
+if __name__ == "__main__":
+    main()
 import json, random, uuid, hashlib, requests
 import plotly.express as px
 import plotly.graph_objects as go
