@@ -1,4 +1,6 @@
 {
+  "buildCommand": "",
+  "installCommand": "pip install -r requirements.txt",
   "functions": {
     "api/index.py": {
       "memory": 512,
@@ -6,6 +8,6 @@
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/app.py" }
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
